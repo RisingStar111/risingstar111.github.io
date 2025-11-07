@@ -4,10 +4,10 @@
 
 layout: home
 ---
-[link](pages/bombe.html)
+[link](pages/bombe/bombe.markdown)
 
 <iframe 
-  src="{{ '/pages/bombe.html' | relative_url }}" 
+  src="{{ '/pages/bombe/bombe.html' | relative_url }}" 
   width="800" 
   height="600" 
   style="border:none;">
