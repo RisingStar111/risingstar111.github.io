@@ -44,6 +44,15 @@
         <br>
         <label>Use WASD or Arrow keys to move. R to restart. Push boxes to open a way to the goal in the fewest steps.</label>
     </div>
+    <div id="buttonControls">
+        <button onclick="moveHandler([0, -1])">↑</button>
+        <br>
+        <button onclick="moveHandler([-1, 0])">←</button>
+        <button onclick="moveHandler([0, 1])">↓</button>
+        <button onclick="moveHandler([1, 0])">→</button>
+        <br>
+        <button onclick="restartLevel()">Restart</button>
+    </div>
 
     <script>
         const canvas = document.getElementById('canvas');
