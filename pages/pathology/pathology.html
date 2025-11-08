@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Template</title>
+    <style>
+        /* Add any CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        #canvasContainer {
+            position: relative;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+        }
+        #controlPanel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        #textSizeInput {
+            width: 50px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>5x5 levels</h1>
+    <div id="canvasContainer">
+        <canvas id="canvas" width="360" height="360"></canvas>
+        <br>
+        <button onclick="generateLevel()">Random level</button>
+        <label id="stepGoal">Current/Optimal stepcount: 0/0</label>
+        <br>
+        <label>Use WASD or Arrow keys to move. R to restart. Push boxes to open a way to the goal in the fewest steps.</label>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        let steps = [];
+        let grid = defaultGrid();
+        let baseGrid = defaultGrid();
+        let optimalStepcount = 0;
+        // dimensions are hardcoded but no guarantees I won't change that later
+        const gridWidth = 5;
+        const gridHeight = 5;
+        let tileSize = 400/Math.max(gridWidth, gridHeight);
+        // can't see a reason I'd add more than one goal, and simplifies grid to separate
+        let goalX = 2;
+        let goalY = 3;
+        let playerX = 3;
+        let playerY = 3;
+
+        // encoded values are just sequential, map those to
+        // 0-15: bits ON indicate pushable from the top, left, bottom, right (most to least sig bit)
+        // 16: empty tile
+        // 17: goal
+        // 18: player
+        // 19: hole // not used
+        const tilemap = [16,  0, 15, 17, 18, 19,  1,  2,  4,  8,
+                          3,  6, 12,  9, 14, 13, 11,  7,  5, 10];
+
+        const tileImg = new Image();
+        tileImg.src = "base.png";
+
+        // load level binary
+        const levelNum = 56599;
+        let levelSize = gridWidth * gridHeight
+        let levels = undefined
+        loadLevelData().then(buffer => {levels = new Int8Array(buffer); console.log("Loaded levels data.");});
+        // if (levels) {
+        //     let reader = new FileReader();
+        //     reader.readAsArrayBuffer(levels);
+        //     reader.onload = function (event) {
+        //         // This may need to be a DataView to set endianness
+        //         // var globals
+        //         var levelsView = new Int8Array(event.target.result);
+        //     }
+        // }
+
+        async function loadLevelData() {
+            const response = await fetch("levels.bin");
+            const buffer = await response.arrayBuffer();
+            console.log("Got levels data.");
+            return buffer
+        }
+
+        function generateLevel() {
+            steps = [];
+
+            let levelIndex = Math.floor(Math.random() * levelNum);
+            optimalStepcount = levels[levelIndex];
+            grid = levels.slice(levelNum + levelSize * levelIndex, levelNum + levelSize * (levelIndex + 1));
+            baseGrid = grid.map(function (val) {return tilemap[val]});
+            grid = grid.map(function (val) {return tilemap[val]});
+            locateAndRemovePlayer();
+
+            drawLevel();
+        }
+
+        function restartLevel() {
+            steps = [];
+            grid = baseGrid.slice();
+            locateAndRemovePlayer();
+            drawLevel();
+        }
+
+        function locateAndRemovePlayer() {
+            for (let i = 0; i < levelSize; i++) {
+                if (grid[i] == 18) {
+                    grid[i] = 16;
+                    playerX = i % gridWidth;
+                    playerY = Math.floor(i / gridWidth);
+                }
+                if (grid[i] == 17) {
+                    grid[i] = 16;
+                    goalX = i % gridWidth;
+                    goalY = Math.floor(i / gridWidth);
+                }
+            }
+        }
+
+        function moveHandler(dir) {
+            const newPos = [playerX + dir[0], playerY + dir[1]];
+            if (!checkMoveable(newPos, dir)) {
+                return
+            }
+            const tile = grid[newPos[0] + gridWidth * newPos[1]];
+
+            // no holes atm so can just move block since it's moveable
+            if (tile <= 15) {
+                grid[newPos[0] + dir[0] + gridWidth * (newPos[1] + dir[1])] = grid[newPos[0] + gridWidth * newPos[1]];
+                grid[newPos[0] + gridWidth * newPos[1]] = 16;
+            }
+            
+            // now empty so just move player to there
+            playerX = newPos[0];
+            playerY = newPos[1];
+            steps.push([dir[0], dir[1]]);
+            drawLevel();
+        }
+
+        function checkMoveable(pos, dir) {
+            // check in bounds
+            if (pos[0] < 0 || pos[0] >= gridWidth || pos[1] < 0 || pos[1] >= gridHeight) {
+                return false
+            }
+
+            const tile = grid[pos[0] + gridWidth * pos[1]];
+            // if empty, free to move
+            if (tile == 16) {
+                return true
+            }
+            // check there's nothing in the way
+            const intoPos = [pos[0] + dir[0], pos[1] + dir[1]];
+            if (intoPos[0] < 0 || intoPos[0] >= gridWidth || intoPos[1] < 0 || intoPos[1] >= gridHeight) {
+                return false
+            }
+            const intoTile = grid[pos[0] + dir[0] + gridWidth * (pos[1] + dir[1])];
+            if (intoTile <= 15) { // no holes atm
+                return false
+            }
+            // check can be pushed in dir
+            if (tile <= 15) {
+                // dir to bit index // can't even use a switch easily if i wanted so have this instead
+                // inverted since tile is by side pushable from
+                let bit = 1 << (dir[0] * (dir[0] + 1) + Math.abs(dir[1]) * (dir[1] + 2));
+                return (tile & bit) > 0
+            }
+        }
+
+        document.addEventListener('keydown', function (event) {
+            // stackoverflow moment
+            const direction = {
+                "ArrowLeft"  : [-1, 0],
+                "ArrowRight" : [1, 0],
+                "ArrowUp"    : [0, -1],
+                "ArrowDown"  : [0, 1],
+                "KeyW"       : [0, -1],
+                "KeyA"       : [-1, 0],
+                "KeyS"       : [0, 1],
+                "KeyD"       : [1, 0],
+            }[event.code];
+            if (direction !== undefined) {
+                moveHandler(direction);
+            }
+
+            if (event.code == "KeyR") {
+                restartLevel();
+            }
+        });
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawShapeOnCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            indexCoords = [];
+
+            for (let j = 0; j < tileNumberY; j += 1) {
+            let alternateRow = j % 2 === 0 ? true : false;
+            
+                for (let i = 0; i < tileNumberX; i += 1) {
+                    let xPos = i * tileSize + 10;
+                    let yPos = j * tileSize + 10;
+                    drawSquare(xPos, yPos);
+                    xPos += tileSize/2;
+                    yPos += tileSize/2;
+                    
+                    indexCoords.push(new IndexCoord(i + j * tileNumberX, Math.max(Math.min(xPos, canvas.width), 0), Math.max(Math.min(yPos, canvas.height), 0)));
+                }
+            }
+        }
+
+        function drawTile(tile, gridPos) {
+            // grid to canvas position
+            const canvasX = gridPos[0] * (canvas.width / gridWidth);
+            const canvasY = gridPos[1] * (canvas.height / gridHeight);
+
+            // render image from spritesheet
+            const spriteX = tile * 34;
+            ctx.drawImage(tileImg, spriteX, 0, 32, 32, canvasX, canvasY, canvas.width / gridWidth, canvas.height / gridHeight);
+        }
+
+        function drawLevel() {
+            clearCanvas();
+            
+            // draw blocks
+            for (let i = 0; i < grid.length; i++) {
+                drawTile(grid[i], [i % gridWidth, Math.floor(i / gridHeight)])
+            }
+
+            // draw player
+            drawTile(18, [playerX, playerY]);
+
+            // draw goal if empty, special sprite for winning
+            if (playerX == goalX && playerY == goalY) {
+                drawTile(20, [goalX, goalY]);
+            } else if (grid[goalX + gridWidth * goalY] == 16) {
+                drawTile(17, [goalX, goalY]);
+            }
+
+
+            // set optimal stepcount display
+            document.getElementById("stepGoal").innerHTML = "Current/Optimal stepcount: " + steps.length.toString() + "/" + optimalStepcount.toString();
+        }
+
+        function defaultGrid() {
+            return [
+                 16,  1,  2,  3,  4,
+                 5,  6,  7,  8,  9,
+                10, 11, 12, 13, 14,
+                15, 16, 16, 16, 0,
+                16, 16, 0, 0, 16,
+            ]
+        }
+    </script>
+</body>
+</html>
