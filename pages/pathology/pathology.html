@@ -89,15 +89,6 @@
         let levelSize = gridWidth * gridHeight
         let levels = undefined
         loadLevelData().then(buffer => {levels = new Int8Array(buffer); console.log("Loaded levels data.");});
-        // if (levels) {
-        //     let reader = new FileReader();
-        //     reader.readAsArrayBuffer(levels);
-        //     reader.onload = function (event) {
-        //         // This may need to be a DataView to set endianness
-        //         // var globals
-        //         var levelsView = new Int8Array(event.target.result);
-        //     }
-        // }
 
         async function loadLevelData() {
             const response = await fetch("levels.bin");

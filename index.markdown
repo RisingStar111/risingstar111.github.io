@@ -4,4 +4,4 @@
 
 layout: home
 ---
-[link](pages/bombe/bombe.markdown)
+asd
