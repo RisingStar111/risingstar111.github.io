@@ -23,15 +23,6 @@
             padding: 10px 20px;
             margin: 5px;
         }
-        #controlPanel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
-        #textSizeInput {
-            width: 50px;
-            padding: 5px;
-        }
     </style>
 </head>
 <body>
@@ -53,6 +44,9 @@
         <br>
         <button onclick="restartLevel()">Restart</button>
     </div>
+    <div id="bonusOptions">
+        <label><input type="checkbox" id="orientationToggle" checked>Randomise orientation</label>
+    </div>
 
     <script>
         const canvas = document.getElementById('canvas');
@@ -62,6 +56,7 @@
         let grid = defaultGrid();
         let baseGrid = defaultGrid();
         let optimalStepcount = 0;
+        let randomOrientationToggle = document.getElementById("orientationToggle");
         // dimensions are hardcoded but no guarantees I won't change that later
         const gridWidth = 5;
         const gridHeight = 5;
@@ -97,15 +92,57 @@
             return buffer
         }
 
+        function rotateLevelCCW() {
+            let newGrid = new Array(grid.length);
+            for (let i = 0; i < gridWidth; i++) {
+                for (let j = 0; j < gridHeight; j++) {
+                    // assumes square
+                    let tile = grid[j + gridWidth * i];
+                    if (tile <= 15) {
+                        tile = (tile >> 1) | ((tile & 1) << 3);
+                    }
+                    newGrid[i + gridWidth * (gridHeight - j - 1)] = tile;
+                }
+            }
+            return newGrid
+        }
+        
+        function mirrorLevel() {
+            let newGrid = new Array(grid.length);
+            for (let i = 0; i < gridWidth; i++) {
+                for (let j = 0; j < gridHeight; j++) {
+                    let tile = grid[gridWidth - i - 1 + gridWidth * j];
+                    if (tile <= 15) {
+                        tile = tile ^ (5 * ((tile ^ (tile >> 2)) & 1));
+                    }
+                    newGrid[i + gridWidth * j] = tile;
+                }
+            }
+            return newGrid
+        }
+
         function generateLevel() {
             steps = [];
 
-            let levelIndex = Math.floor(Math.random() * levelNum);
+            let levelIndex = randomInt(0, levelNum);
             optimalStepcount = levels[levelIndex];
             grid = levels.slice(levelNum + levelSize * levelIndex, levelNum + levelSize * (levelIndex + 1));
-            baseGrid = grid.map(function (val) {return tilemap[val]});
             grid = grid.map(function (val) {return tilemap[val]});
-            locateAndRemovePlayer();
+
+            if (randomOrientationToggle.checked) {
+                let rot = randomInt(0, 4);
+                let flip = randomInt(0, 2);
+                if (flip > 0) {
+                    grid = mirrorLevel();
+                }
+                while (rot > 0) {
+                    grid = rotateLevelCCW();
+                    rot--;
+                }
+            }
+
+            baseGrid = grid.slice();
+            locateAndRemovePlayerAndGoal();
 
             drawLevel();
         }
@@ -113,11 +150,11 @@
         function restartLevel() {
             steps = [];
             grid = baseGrid.slice();
-            locateAndRemovePlayer();
+            locateAndRemovePlayerAndGoal();
             drawLevel();
         }
 
-        function locateAndRemovePlayer() {
+        function locateAndRemovePlayerAndGoal() {
             for (let i = 0; i < levelSize; i++) {
                 if (grid[i] == 18) {
                     grid[i] = 16;
@@ -179,6 +216,10 @@
                 let bit = 1 << (dir[0] * (dir[0] + 1) + Math.abs(dir[1]) * (dir[1] + 2));
                 return (tile & bit) > 0
             }
+        }
+
+        function randomInt(lowInclusive, highExclusive) {
+            return lowInclusive + Math.floor(Math.random() * (highExclusive - lowInclusive))
         }
 
         document.addEventListener('keydown', function (event) {
