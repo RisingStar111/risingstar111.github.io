@@ -12,7 +12,8 @@
             margin: 20px;
         }
         #canvasContainer {
-            position: relative;
+            position: absolute;
+            left: 10px;
         }
         canvas {
             border: 1px solid #ccc;
@@ -23,7 +24,7 @@
         }
         #controlPanel {
             position: absolute;
-            top: 10px;
+            top: 50px;
             right: 10px;
         }
         #textSizeInput {
@@ -33,8 +34,8 @@
     </style>
 </head>
 <body>
-    <h1>Bombe Level Maker (WIP)</h1>
     <div id="canvasContainer">
+        <h1>Bombe Level Maker</h1>
         <canvas id="canvas" width="500" height="500"></canvas>
         <div id="buttons">
             <button onclick="drawText()">Draw Text</button>

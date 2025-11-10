@@ -4,11 +4,11 @@ title: Bombe Editor
 permalink: /bombe/
 ---
 
-This is a page to describe the bombe thing
+Basic level creator for the game [Bombe](https://store.steampowered.com/app/2262930/Bombe/)
 
 <iframe 
   src="{{ '/pages/bombe/bombe.html' | relative_url }}" 
-  width="800" 
-  height="600" 
+  width="1000" 
+  height="800" 
   style="border:none;">
 </iframe>
