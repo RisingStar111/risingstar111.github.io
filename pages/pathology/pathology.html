@@ -46,6 +46,7 @@
     </div>
     <div id="bonusOptions">
         <label><input type="checkbox" id="orientationToggle" checked>Randomise orientation</label>
+        <label><input type="checkbox" id="automaticRandom">New level when optimal</label>
     </div>
 
     <script>
@@ -57,6 +58,7 @@
         let baseGrid = defaultGrid();
         let optimalStepcount = 0;
         let randomOrientationToggle = document.getElementById("orientationToggle");
+        let automaticRandomToggle = document.getElementById("automaticRandom");
         // dimensions are hardcoded but no guarantees I won't change that later
         const gridWidth = 5;
         const gridHeight = 5;
@@ -290,6 +292,9 @@
             // draw goal if empty, special sprite for winning
             if (playerX == goalX && playerY == goalY) {
                 drawTile(20, [goalX, goalY]);
+                if (steps.length == optimalStepcount && automaticRandomToggle.checked) {
+                    generateLevel();
+                }
             } else if (grid[goalX + gridWidth * goalY] == 16) {
                 drawTile(17, [goalX, goalY]);
             }
