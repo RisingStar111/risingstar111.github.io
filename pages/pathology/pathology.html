@@ -88,6 +88,7 @@
         loadLevelData().then(buffer => {levels = new Int8Array(buffer); console.log("Loaded levels data.");});
 
         async function loadLevelData() {
+            // if actually adding more level sets, probably good to look into external hosting
             const response = await fetch("levels.bin");
             const buffer = await response.arrayBuffer();
             console.log("Got levels data.");
