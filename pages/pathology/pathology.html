@@ -79,7 +79,7 @@
                           3,  6, 12,  9, 14, 13, 11,  7,  5, 10];
 
         const tileImg = new Image();
-        tileImg.src = "base.png";
+        tileImg.src = "sprites/base.png";
 
         // load level binary
         const levelNum = 56599;
@@ -89,7 +89,7 @@
 
         async function loadLevelData() {
             // if actually adding more level sets, probably good to look into external hosting
-            const response = await fetch("levels.bin");
+            const response = await fetch("level_batches/5x5holeless.bin");
             const buffer = await response.arrayBuffer();
             console.log("Got levels data.");
             return buffer
@@ -248,25 +248,6 @@
 
         function clearCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function drawShapeOnCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            indexCoords = [];
-
-            for (let j = 0; j < tileNumberY; j += 1) {
-            let alternateRow = j % 2 === 0 ? true : false;
-            
-                for (let i = 0; i < tileNumberX; i += 1) {
-                    let xPos = i * tileSize + 10;
-                    let yPos = j * tileSize + 10;
-                    drawSquare(xPos, yPos);
-                    xPos += tileSize/2;
-                    yPos += tileSize/2;
-                    
-                    indexCoords.push(new IndexCoord(i + j * tileNumberX, Math.max(Math.min(xPos, canvas.width), 0), Math.max(Math.min(yPos, canvas.height), 0)));
-                }
-            }
         }
 
         function drawTile(tile, gridPos) {

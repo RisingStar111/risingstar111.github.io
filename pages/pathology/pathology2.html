@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Template</title>
+    <style>
+        /* Add any CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        #canvasContainer {
+            position: relative;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .selected {
+            border: 2px solid red;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+        }
+        /* gpt-ed grid selection */
+        gridSelect {
+            display: grid;
+            grid-template-columns: repeat(4, 32px);
+            gap: 5px;
+        }
+        .sprite {
+            border: 2px solid white;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: url('./sprites/modular.png');
+            width: 32px;
+            height: 32px;
+        }
+        .sprite.selected {
+            border: 2px solid red;
+        }
+        .sprite[data-id="wallSide"]  { background-position: -68px  0; }
+        .sprite[data-id="basicSide"] { background-position:  0     0; }
+        .sprite[data-id="iceSide"]   { background-position: -34px  0; }
+        .sprite[data-id="swapSide"]  { background-position: -102px 0; }
+        .sprite[data-id="emptySpace"]  { background-position:  0     -34px; }
+        .sprite[data-id="goalSpace"]   { background-position: -34px  -34px; }
+        .sprite[data-id="playerTile"]  { background-position: -68px  -34px; }
+    </style>
+</head>
+<body>
+    <h1>5x5 levels</h1>
+    <div id="canvasContainer">
+        <canvas id="canvas" width="360" height="360"></canvas>
+        <br>
+        <label>Make a level with modular blocks</label>
+    </div>
+    <div id="buttonControls">
+        <div id="editorControls">
+            <button id="playButton">Play</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr">
+                <div>
+                    <gridSelect id="topSideSelection">
+                        <div class="sprite selected" data-id="wallSide"></div>
+                        <div class="sprite" data-id="basicSide"></div>
+                        <div class="sprite" data-id="iceSide"></div>
+                        <div class="sprite" data-id="swapSide"></div>
+                    </gridSelect>
+                    <gridSelect id="leftSideSelection">
+                        <div class="sprite selected" data-id="wallSide"></div>
+                        <div class="sprite" data-id="basicSide"></div>
+                        <div class="sprite" data-id="iceSide"></div>
+                        <div class="sprite" data-id="swapSide"></div>
+                    </gridSelect>
+                    <gridSelect id="rightSideSelection">
+                        <div class="sprite selected" data-id="wallSide"></div>
+                        <div class="sprite" data-id="basicSide"></div>
+                        <div class="sprite" data-id="iceSide"></div>
+                        <div class="sprite" data-id="swapSide"></div>
+                    </gridSelect>
+                    <gridSelect id="bottomSideSelection">
+                        <div class="sprite selected" data-id="wallSide"></div>
+                        <div class="sprite" data-id="basicSide"></div>
+                        <div class="sprite" data-id="iceSide"></div>
+                        <div class="sprite" data-id="swapSide"></div>
+                    </gridSelect>
+                </div>
+                <div>
+                    <canvas class="selected" id="blockPreview" style="display: inline" width="64", height="64"></canvas>
+                    <br>
+                    <input type="checkbox" id="clearPlacement">
+                    <label for="clearPlacement">Remove blocks</label>
+                    <br>
+                    <input type="number" id="width" min="1" max="20" value="5">
+                    <label for="width">Width</label>
+                    <input type="number" id="height" min="1" max="20" value="5">
+                    <label for="height">Height</label>
+                    <br>
+                    <button id="resizeButton">Resize</button>
+                </div>
+                <gridSelect id="spaceSelection">
+                    <div class="sprite" data-id="emptySpace"></div>
+                    <div class="sprite" data-id="goalSpace"></div>
+                    <div class="sprite" data-id="playerTile"></div>
+                </gridSelect>
+            </div>
+        </div>
+        <div id="playControls" style="display: none">
+            <button id="editButton">Edit</button>
+            <button id="moveUpButton">↑</button>
+            <br>
+            <button id="moveLeftButton">←</button>
+            <button id="moveDownButton">↓</button>
+            <button id="moveRightButton">→</button>
+            <br>
+            <button id="restartButton">Restart</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import init, { Board, Block, Direction, Space } from './pkg/hello_wasm.js';
+
+        async function run() {
+            // Initialise the wasm - loads into memory but functions are only available while in this scope
+            await init();
+
+            // create wasm boards and handlers
+            let editorBoard = newBoard(5, 5);
+            let playBoard = newBoard(5, 5);
+            let topSide = "wallSide";
+            let bottomSide = "wallSide";
+            let leftSide = "wallSide";
+            let rightSide = "wallSide";
+            let space = "emptySpace";
+            let placeLayer = "block";
+            let clearPlacement = () => document.getElementById("clearPlacement").checked;
+            let playing = false;
+
+            const previewCanvas = document.getElementById("blockPreview");
+            const previewCtx = previewCanvas.getContext("2d");
+            previewCtx.imageSmoothingEnabled = false;
+
+            // set up the editor canvas buttons
+
+            // Set up button callbacks
+            // functions within this module but outside the function are fair game
+            document.getElementById("moveUpButton").onclick = () => moveHandler([0, -1]);
+            document.getElementById("moveDownButton").onclick = () => moveHandler([0, 1]);
+            document.getElementById("moveLeftButton").onclick = () => moveHandler([-1, 0]);
+            document.getElementById("moveRightButton").onclick = () => moveHandler([1, 0]);
+            document.getElementById("restartButton").onclick = restartLevel;
+            document.getElementById("playButton").onclick = playLevel;
+            document.getElementById("editButton").onclick = editLevel;
+            document.getElementById("resizeButton").onclick = () => {editorBoard = newBoard(parseInt(document.getElementById("width").value), parseInt(document.getElementById("height").value)); drawBoard(editorBoard)};
+
+            function restartLevel() {
+                playBoard = editorBoard.clone();
+                drawBoard(playBoard);
+            }
+
+            function playLevel() {
+                document.getElementById("playControls").style.display = "block";
+                document.getElementById("editorControls").style.display = "none";
+
+                restartLevel();
+                playing = true;
+            }
+            function editLevel() {
+                document.getElementById("playControls").style.display = "none";
+                document.getElementById("editorControls").style.display = "block";
+
+                drawBoard(editorBoard);
+                playing = false;
+            }
+            function newBoard(width, height) {
+                return Board.default(width, height)
+            }
+
+            function drawBlockPreview() {
+                drawBlock(topSide, bottomSide, leftSide, rightSide, [0, 0], 1, 1, previewCtx, previewCanvas);
+            }
+            function drawBoard(board) {
+                const width = board.get_width();
+                const height = board.get_height();
+                for (let x = 0; x < width; x++) {
+                    for (let y = 0; y < height; y++) {
+                        const index = x + y * width;
+                        const block = board.get_block_tblr(index);
+                        const space = board.get_space(index);
+                        drawSpace(space, [x, y], width, height, ctx, canvas);
+                        if (block != null) {
+                            drawBlock(block[0], block[1], block[2], block[3], [x, y], width, height, ctx, canvas);
+                        }
+                    }
+                }
+                const playerIndex = board.get_player();
+                drawSpace("playerTile", [playerIndex % width, (playerIndex - (playerIndex % width)) / width], width, height, ctx, canvas)
+            }
+
+            function assignSide(gridElement, event) { // still gpt-ed
+                const item = event.target.closest(".sprite");
+                if (!item) return;
+
+                // Remove previous selection
+                gridElement.querySelectorAll(".sprite.selected")
+                        .forEach(el => el.classList.remove("selected"));
+
+                // Select the clicked one
+                item.classList.add("selected");
+
+                // Emit selection
+                return item.dataset.id;
+            }
+
+            const topSideSelection = document.getElementById("topSideSelection");
+            topSideSelection.addEventListener('click', (e) => {topSide = assignSide(topSideSelection, e);
+                drawBlockPreview();})
+            const bottomSideSelection = document.getElementById("bottomSideSelection");
+            bottomSideSelection.addEventListener('click', (e) => {bottomSide = assignSide(bottomSideSelection, e);
+                drawBlockPreview();})
+            const leftSideSelection = document.getElementById("leftSideSelection");
+            leftSideSelection.addEventListener('click', (e) => {leftSide = assignSide(leftSideSelection, e);
+                drawBlockPreview();})
+            const rightSideSelection = document.getElementById("rightSideSelection");
+            rightSideSelection.addEventListener('click', (e) => {rightSide = assignSide(rightSideSelection, e);
+                drawBlockPreview();})
+
+            const spaceSelection = document.getElementById("spaceSelection");
+            spaceSelection.addEventListener('click', (e) => {
+                space = assignSide(spaceSelection, e);
+                placeLayer = "space";
+                document.getElementById("blockPreview").classList.remove("selected")})
+            const blockPreview = document.getElementById("blockPreview");
+            blockPreview.addEventListener('click', (e) => {
+                placeLayer = "block";
+                blockPreview.classList.add("selected");
+                spaceSelection.querySelectorAll(".sprite.selected").forEach(el => el.classList.remove("selected"));})
+
+            document.addEventListener('keydown', function (event) {
+                // stackoverflow moment
+                const direction = {
+                    "ArrowLeft"  : Direction.Left,
+                    "ArrowRight" : Direction.Right,
+                    "ArrowUp"    : Direction.Up,
+                    "ArrowDown"  : Direction.Down,
+                    "KeyW"       : Direction.Up,
+                    "KeyA"       : Direction.Left,
+                    "KeyS"       : Direction.Down,
+                    "KeyD"       : Direction.Right,
+                }[event.code];
+                if (playing) {
+                    if (direction !== undefined) {
+                        playBoard.move_player(direction);
+                        drawBoard(playBoard);
+                    }
+
+                    if (event.code == "KeyR") {
+                        restartLevel();
+                    }
+                }
+            });
+
+            document.getElementById("canvas").addEventListener('click', (e) => {
+                if (!playing) {
+                    const rect = canvas.getBoundingClientRect();
+                    const clickX = (e.clientX - rect.left) / canvas.width;
+                    const clickY = (e.clientY - rect.top) / canvas.height;
+                    const clickIndex = editorBoard.get_index(clickX, clickY);
+                    if (placeLayer == "block") {
+                        editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_tblr(topSide, bottomSide, leftSide, rightSide));
+                    } else if (placeLayer == "space") {
+                        if (space == "playerTile") {
+                            editorBoard.set_block(clickIndex, null);
+                            editorBoard.set_player(clickIndex);
+                        } else {
+                            switch (space) {
+                                case "emptySpace":
+                                    editorBoard.set_space(clickIndex, Space.Empty);
+                                    break;
+                                case "goalSpace":
+                                    editorBoard.set_space(clickIndex, Space.Goal);
+                                    break;
+                            
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                    drawBoard(editorBoard);
+                }
+            });
+
+            drawBlockPreview();
+            drawBoard(editorBoard);
+        }
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        const modularImg = new Image();
+        modularImg.src = "sprites/modular.png";
+
+        const sideOffsets = {
+            "wallSide" : 68,
+            "basicSide" : 0,
+            "iceSide" : 34,
+            "swapSide" : 102,
+            }
+        const spaceOffsets = {
+            "emptySpace" : 0,
+            "goalSpace" : 34,
+            "playerTile" : 68,
+            }
+        function drawBlock(top, bottom, left, right, gridPos, gridWidth, gridHeight, ctx, canvas) {
+            drawTile(sideOffsets[top], 0, gridPos, 0, gridWidth, gridHeight, ctx, canvas);
+            drawTile(sideOffsets[left], 0, gridPos, 3*Math.PI/2, gridWidth, gridHeight, ctx, canvas);
+            drawTile(sideOffsets[bottom], 0, gridPos, Math.PI, gridWidth, gridHeight, ctx, canvas);
+            drawTile(sideOffsets[right], 0, gridPos, Math.PI/2, gridWidth, gridHeight, ctx, canvas);
+        }
+        function drawSpace(space, gridPos, gridWidth, gridHeight, ctx, canvas) {
+            drawTile(spaceOffsets[space], 34, gridPos, 0, gridWidth, gridHeight, ctx, canvas)
+        }
+
+        function drawTile(spriteXOffset, spriteYOffset, gridPos, angle, gridWidth, gridHeight, ctx, canvas) {
+            // grid to canvas position
+            const canvasX = gridPos[0] * (canvas.width / gridWidth);
+            const canvasY = gridPos[1] * (canvas.height / gridHeight);
+
+            // render image from spritesheet
+            ctx.translate(canvasX + 32, canvasY + 32);
+            ctx.rotate(angle);
+            ctx.translate(-32, -32);
+            ctx.drawImage(modularImg, spriteXOffset, spriteYOffset, 32, 32, 0, 0, canvas.width / gridWidth, canvas.height / gridHeight);
+            ctx.translate(32, 32);
+            ctx.rotate(-angle);
+            ctx.translate(-canvasX - 32, -canvasY - 32);
+        }
+
+        run();
+    </script>
+</body>
+</html>

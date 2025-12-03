@@ -28,6 +28,7 @@ github_username:  risingstar111
 
 header_pages:
   - pages/pathology/pathology.markdown
+  - pages/pathology/sandbox.markdown
   - pages/bombe/bombe.markdown
 
 # Build settings
@@ -54,3 +55,6 @@ plugins:
 #   - vendor/cache/
 #   - vendor/gems/
 #   - vendor/ruby/
+
+exclude:
+  - rust/
