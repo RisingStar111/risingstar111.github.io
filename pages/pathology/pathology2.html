@@ -148,10 +148,10 @@
 
             // Set up button callbacks
             // functions within this module but outside the function are fair game
-            document.getElementById("moveUpButton").onclick = () => moveHandler([0, -1]);
-            document.getElementById("moveDownButton").onclick = () => moveHandler([0, 1]);
-            document.getElementById("moveLeftButton").onclick = () => moveHandler([-1, 0]);
-            document.getElementById("moveRightButton").onclick = () => moveHandler([1, 0]);
+            document.getElementById("moveUpButton").onclick = () => moveHandler(Direction.Up);
+            document.getElementById("moveDownButton").onclick = () => moveHandler(Direction.Down);
+            document.getElementById("moveLeftButton").onclick = () => moveHandler(Direction.Left);
+            document.getElementById("moveRightButton").onclick = () => moveHandler(Direction.Right);
             document.getElementById("restartButton").onclick = restartLevel;
             document.getElementById("playButton").onclick = playLevel;
             document.getElementById("editButton").onclick = editLevel;
