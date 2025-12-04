@@ -55,7 +55,7 @@
 <body>
     <h1>5x5 levels</h1>
     <div id="canvasContainer">
-        <canvas id="canvas" width="360" height="360"></canvas>
+        <canvas id="canvas" width="320" height="320"></canvas>
         <br>
         <label>Make a level with modular blocks</label>
     </div>
@@ -64,25 +64,26 @@
             <button id="playButton">Play</button>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr">
                 <div>
-                    <gridSelect id="topSideSelection">
+                    <p style="float: right">Wall Basic Ice Swap</p>
+                    <gridSelect id="topSideSelection" style="float: right">
                         <div class="sprite selected" data-id="wallSide"></div>
                         <div class="sprite" data-id="basicSide"></div>
                         <div class="sprite" data-id="iceSide"></div>
                         <div class="sprite" data-id="swapSide"></div>
                     </gridSelect>
-                    <gridSelect id="leftSideSelection">
+                    <gridSelect id="leftSideSelection" style="float: right">
                         <div class="sprite selected" data-id="wallSide"></div>
                         <div class="sprite" data-id="basicSide"></div>
                         <div class="sprite" data-id="iceSide"></div>
                         <div class="sprite" data-id="swapSide"></div>
                     </gridSelect>
-                    <gridSelect id="rightSideSelection">
+                    <gridSelect id="rightSideSelection" style="float: right">
                         <div class="sprite selected" data-id="wallSide"></div>
                         <div class="sprite" data-id="basicSide"></div>
                         <div class="sprite" data-id="iceSide"></div>
                         <div class="sprite" data-id="swapSide"></div>
                     </gridSelect>
-                    <gridSelect id="bottomSideSelection">
+                    <gridSelect id="bottomSideSelection" style="float: right">
                         <div class="sprite selected" data-id="wallSide"></div>
                         <div class="sprite" data-id="basicSide"></div>
                         <div class="sprite" data-id="iceSide"></div>
@@ -155,8 +156,29 @@
             document.getElementById("restartButton").onclick = restartLevel;
             document.getElementById("playButton").onclick = playLevel;
             document.getElementById("editButton").onclick = editLevel;
-            document.getElementById("resizeButton").onclick = () => {editorBoard = newBoard(parseInt(document.getElementById("width").value), parseInt(document.getElementById("height").value)); drawBoard(editorBoard)};
+            document.getElementById("resizeButton").onclick = resizeLevel;
 
+            function resizeLevel() {
+                const newWidth = parseInt(document.getElementById("width").value);
+                const newHeight = parseInt(document.getElementById("height").value);
+
+                // resize canvas to a square ratio
+                const baseSide = 320; // change this when allowing resizeable canvas
+                let ratio = newWidth / newHeight;
+                if (ratio > 1) {
+                    // shrink height
+                    ratio = 1/ratio;
+                    canvas.setAttribute("width", baseSide);
+                    canvas.setAttribute("height",  ratio * baseSide);
+                } else {
+                    // shrink width
+                    canvas.setAttribute("width", ratio * baseSide);
+                    canvas.setAttribute("height",  baseSide);
+                }
+
+                editorBoard = newBoard(newWidth, newHeight);
+                drawBoard(editorBoard);
+            }
             function restartLevel() {
                 playBoard = editorBoard.clone();
                 drawBoard(playBoard);
@@ -334,15 +356,17 @@
             // grid to canvas position
             const canvasX = gridPos[0] * (canvas.width / gridWidth);
             const canvasY = gridPos[1] * (canvas.height / gridHeight);
-
+            const tileWidth = canvas.width / gridWidth;
+            const tileHeight = canvas.height / gridHeight;
+            const spriteSize = 32;
             // render image from spritesheet
-            ctx.translate(canvasX + 32, canvasY + 32);
+            ctx.translate(canvasX + tileWidth/2, canvasY + tileHeight/2);
             ctx.rotate(angle);
-            ctx.translate(-32, -32);
-            ctx.drawImage(modularImg, spriteXOffset, spriteYOffset, 32, 32, 0, 0, canvas.width / gridWidth, canvas.height / gridHeight);
-            ctx.translate(32, 32);
+            ctx.translate(-tileWidth/2, -tileHeight/2);
+            ctx.drawImage(modularImg, spriteXOffset, spriteYOffset, spriteSize, spriteSize, 0, 0, tileWidth, tileHeight);
+            ctx.translate(tileWidth/2, tileHeight/2);
             ctx.rotate(-angle);
-            ctx.translate(-canvasX - 32, -canvasY - 32);
+            ctx.translate(-canvasX - tileWidth/2, -canvasY - tileHeight/2);
         }
 
         run();
