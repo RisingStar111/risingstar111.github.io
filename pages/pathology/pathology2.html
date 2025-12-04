@@ -240,6 +240,11 @@
                 blockPreview.classList.add("selected");
                 spaceSelection.querySelectorAll(".sprite.selected").forEach(el => el.classList.remove("selected"));})
 
+            function moveHandler(direction) {
+                playBoard.move_player(direction);
+                drawBoard(playBoard);
+            }
+            
             document.addEventListener('keydown', function (event) {
                 // stackoverflow moment
                 const direction = {
@@ -254,8 +259,7 @@
                 }[event.code];
                 if (playing) {
                     if (direction !== undefined) {
-                        playBoard.move_player(direction);
-                        drawBoard(playBoard);
+                        moveHandler(direction);
                     }
 
                     if (event.code == "KeyR") {
