@@ -42,9 +42,12 @@
         .sprite.selected {
             border: 2px solid red;
         }
-        .sprite[data-id="emptySpace"]  { background-position:  0     -34px; }
-        .sprite[data-id="goalSpace"]   { background-position: -34px  -34px; }
-        .sprite[data-id="playerTile"]  { background-position: -68px  -34px; }
+        .static {
+            background: url('./sprites/modular.png');
+        }
+        .static[data-id="emptySpace"]  { background-position:  0     -34px; }
+        .static[data-id="goalSpace"]   { background-position: -34px  -34px; }
+        .static[data-id="playerTile"]  { background-position: -68px  -34px; }
     </style>
 </head>
 <body>
@@ -75,9 +78,9 @@
                     <button id="resizeButton">Resize</button>
                 </div>
                 <gridSelect id="spaceSelection">
-                    <div class="sprite" data-id="emptySpace"></div>
-                    <div class="sprite" data-id="goalSpace"></div>
-                    <div class="sprite" data-id="playerTile"></div>
+                    <div class="sprite static" data-id="emptySpace"></div>
+                    <div class="sprite static" data-id="goalSpace"></div>
+                    <div class="sprite static" data-id="playerTile"></div>
                 </gridSelect>
             </div>
         </div>
@@ -380,7 +383,12 @@
             ctx.translate(-canvasX - tileWidth/2, -canvasY - tileHeight/2);
         }
 
-        run();
+        // make sure the initial draw events work
+        if (modularImg.complete) {
+            run();
+        } else {
+            modularImg.onload = run;
+        }
     </script>
 </body>
 </html>
