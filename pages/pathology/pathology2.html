@@ -36,20 +36,10 @@
             border: 2px solid white;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-            background: url('./sprites/modular.png');
-            width: 32px;
-            height: 32px;
         }
         .sprite.selected {
             border: 2px solid red;
         }
-        .sprite[data-id="wallSide"]  { background-position: -68px  0; }
-        .sprite[data-id="basicSide"] { background-position:  0     0; }
-        .sprite[data-id="iceSide"]   { background-position: -34px  0; }
-        .sprite[data-id="swapSide"]  { background-position: -102px 0; }
-        .sprite[data-id="emptySpace"]  { background-position:  0     -34px; }
-        .sprite[data-id="goalSpace"]   { background-position: -34px  -34px; }
-        .sprite[data-id="playerTile"]  { background-position: -68px  -34px; }
     </style>
 </head>
 <body>
@@ -63,32 +53,8 @@
         <div id="editorControls">
             <button id="playButton">Play</button>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr">
-                <div>
-                    <p style="float: right">Wall Basic Ice Swap</p>
-                    <gridSelect id="topSideSelection" style="float: right">
-                        <div class="sprite selected" data-id="wallSide"></div>
-                        <div class="sprite" data-id="basicSide"></div>
-                        <div class="sprite" data-id="iceSide"></div>
-                        <div class="sprite" data-id="swapSide"></div>
-                    </gridSelect>
-                    <gridSelect id="leftSideSelection" style="float: right">
-                        <div class="sprite selected" data-id="wallSide"></div>
-                        <div class="sprite" data-id="basicSide"></div>
-                        <div class="sprite" data-id="iceSide"></div>
-                        <div class="sprite" data-id="swapSide"></div>
-                    </gridSelect>
-                    <gridSelect id="rightSideSelection" style="float: right">
-                        <div class="sprite selected" data-id="wallSide"></div>
-                        <div class="sprite" data-id="basicSide"></div>
-                        <div class="sprite" data-id="iceSide"></div>
-                        <div class="sprite" data-id="swapSide"></div>
-                    </gridSelect>
-                    <gridSelect id="bottomSideSelection" style="float: right">
-                        <div class="sprite selected" data-id="wallSide"></div>
-                        <div class="sprite" data-id="basicSide"></div>
-                        <div class="sprite" data-id="iceSide"></div>
-                        <div class="sprite" data-id="swapSide"></div>
-                    </gridSelect>
+                <div id="sideSelectorContainer">
+                    <!-- Initialised by 'initisaliseSideSelector' -->
                 </div>
                 <div>
                     <canvas class="selected" id="blockPreview" style="display: inline" width="64", height="64"></canvas>
@@ -132,10 +98,9 @@
             // create wasm boards and handlers
             let editorBoard = newBoard(5, 5);
             let playBoard = newBoard(5, 5);
-            let topSide = "wallSide";
-            let bottomSide = "wallSide";
-            let leftSide = "wallSide";
-            let rightSide = "wallSide";
+            // top, left, right, bottom
+            // definitely sacrifices some clarity but i like list manipulation what can i say
+            let selectedSides = ["wallSide", "wallSide", "wallSide", "wallSide"];
             let space = "emptySpace";
             let placeLayer = "block";
             let clearPlacement = () => document.getElementById("clearPlacement").checked;
@@ -202,7 +167,7 @@
             }
 
             function drawBlockPreview() {
-                drawBlock(topSide, bottomSide, leftSide, rightSide, [0, 0], 1, 1, previewCtx, previewCanvas);
+                drawBlock(selectedSides, [0, 0], 1, 1, previewCtx, previewCanvas);
             }
             function drawBoard(board) {
                 const width = board.get_width();
@@ -210,17 +175,67 @@
                 for (let x = 0; x < width; x++) {
                     for (let y = 0; y < height; y++) {
                         const index = x + y * width;
+                        // the inconsistent block ordering being annoying but who can guess if i'll bother to change it
                         const block = board.get_block_tblr(index);
                         const space = board.get_space(index);
                         drawSpace(space, [x, y], width, height, ctx, canvas);
                         if (block != null) {
-                            drawBlock(block[0], block[1], block[2], block[3], [x, y], width, height, ctx, canvas);
+                            drawBlock([block[0], block[2], block[3], block[1]], [x, y], width, height, ctx, canvas);
                         }
                     }
                 }
                 const playerIndex = board.get_player();
                 drawSpace("playerTile", [playerIndex % width, (playerIndex - (playerIndex % width)) / width], width, height, ctx, canvas)
             }
+
+            // Initialise side selector
+            {
+                // insert side names
+                let innerHtml = "<p style=\"float: right\">Wall Basic Ice Swap</p>";
+                // insert grid elements per side
+                const sides = ["top", "left", "right", "bottom"];
+                innerHtml += sides.map((side) => {
+                        return `<gridSelect id="${side}SideSelection" style="float: right">
+                            <canvas width="32" height="32" class="sprite selected" data-id="wallSide"></canvas>
+                            <canvas width="32" height="32" class="sprite" data-id="basicSide"></canvas>
+                            <canvas width="32" height="32" class="sprite" data-id="iceSide"></canvas>
+                            <canvas width="32" height="32" class="sprite" data-id="swapSide"></canvas>
+                        </gridSelect>`
+                    })
+                    .join('');
+                // set page html
+                document.getElementById("sideSelectorContainer").innerHTML = innerHtml;
+
+                // for each side selector
+                for (let i = 0; i < 4; i++) {
+                    // add unique selection callback
+                    const side = sides[i];
+                    const selector = document.getElementById(`${side}SideSelection`);
+                    selector.addEventListener('click', (e) => {
+                        const item = e.target.closest(".sprite");
+                        if (!item) return;
+
+                        // Remove previous selection
+                        selector.querySelector(".selected").classList.remove("selected");
+
+                        // Select the clicked one
+                        item.classList.add("selected");
+
+                        // Set global side variable
+                        selectedSides[i] = item.dataset.id;
+
+                        // Redraw preview
+                        drawBlockPreview();
+                    });
+                    // blit rotated side sprite
+                    selector.querySelectorAll(".sprite")
+                        .forEach((item) => {
+                            const itemCtx = item.getContext('2d');
+                            // (reorder i for rotations cuz i picked the least convenient ordering possible apparently)
+                            drawTile(sideOffsets[item.dataset.id], 0, [0, 0], ([0,3,1,2][i])*Math.PI/2, 1, 1, itemCtx, item);
+                        });
+                }
+            } // end initialise side selector
 
             function assignSide(gridElement, event) { // still gpt-ed
                 const item = event.target.closest(".sprite");
@@ -236,19 +251,6 @@
                 // Emit selection
                 return item.dataset.id;
             }
-
-            const topSideSelection = document.getElementById("topSideSelection");
-            topSideSelection.addEventListener('click', (e) => {topSide = assignSide(topSideSelection, e);
-                drawBlockPreview();})
-            const bottomSideSelection = document.getElementById("bottomSideSelection");
-            bottomSideSelection.addEventListener('click', (e) => {bottomSide = assignSide(bottomSideSelection, e);
-                drawBlockPreview();})
-            const leftSideSelection = document.getElementById("leftSideSelection");
-            leftSideSelection.addEventListener('click', (e) => {leftSide = assignSide(leftSideSelection, e);
-                drawBlockPreview();})
-            const rightSideSelection = document.getElementById("rightSideSelection");
-            rightSideSelection.addEventListener('click', (e) => {rightSide = assignSide(rightSideSelection, e);
-                drawBlockPreview();})
 
             const spaceSelection = document.getElementById("spaceSelection");
             spaceSelection.addEventListener('click', (e) => {
@@ -296,7 +298,7 @@
                     const clickY = (e.clientY - rect.top) / canvas.height;
                     const clickIndex = editorBoard.get_index(clickX, clickY);
                     if (placeLayer == "block") {
-                        editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_tblr(topSide, bottomSide, leftSide, rightSide));
+                        editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_tblr(selectedSides[0], selectedSides[3], selectedSides[1], selectedSides[2]));
                     } else if (placeLayer == "space") {
                         if (space == "playerTile") {
                             editorBoard.set_block(clickIndex, null);
@@ -341,14 +343,19 @@
             "goalSpace" : 34,
             "playerTile" : 68,
             }
-        function drawBlock(top, bottom, left, right, gridPos, gridWidth, gridHeight, ctx, canvas) {
-            drawTile(sideOffsets[top], 0, gridPos, 0, gridWidth, gridHeight, ctx, canvas);
-            drawTile(sideOffsets[left], 0, gridPos, 3*Math.PI/2, gridWidth, gridHeight, ctx, canvas);
-            drawTile(sideOffsets[bottom], 0, gridPos, Math.PI, gridWidth, gridHeight, ctx, canvas);
-            drawTile(sideOffsets[right], 0, gridPos, Math.PI/2, gridWidth, gridHeight, ctx, canvas);
+        function drawBlock(blockSides, gridPos, gridWidth, gridHeight, ctx, canvas) {
+            drawTile(sideOffsets[blockSides[0]], 0, gridPos, 0, gridWidth, gridHeight, ctx, canvas);
+            drawTile(sideOffsets[blockSides[1]], 0, gridPos, 3*Math.PI/2, gridWidth, gridHeight, ctx, canvas);
+            drawTile(sideOffsets[blockSides[2]], 0, gridPos, Math.PI/2, gridWidth, gridHeight, ctx, canvas);
+            drawTile(sideOffsets[blockSides[3]], 0, gridPos, Math.PI, gridWidth, gridHeight, ctx, canvas);
         }
         function drawSpace(space, gridPos, gridWidth, gridHeight, ctx, canvas) {
             drawTile(spaceOffsets[space], 34, gridPos, 0, gridWidth, gridHeight, ctx, canvas)
+        }
+
+        function testlog(gridWidth, canvas) {
+            const canvasX = gridPos[0] * (canvas.width / gridWidth);
+            console.log(canvasX);
         }
 
         function drawTile(spriteXOffset, spriteYOffset, gridPos, angle, gridWidth, gridHeight, ctx, canvas) {
