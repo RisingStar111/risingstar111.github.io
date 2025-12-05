@@ -36,10 +36,15 @@
             border: 2px solid white;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
+            width: 32px;
+            height: 32px;
         }
         .sprite.selected {
             border: 2px solid red;
         }
+        .sprite[data-id="emptySpace"]  { background-position:  0     -34px; }
+        .sprite[data-id="goalSpace"]   { background-position: -34px  -34px; }
+        .sprite[data-id="playerTile"]  { background-position: -68px  -34px; }
     </style>
 </head>
 <body>
