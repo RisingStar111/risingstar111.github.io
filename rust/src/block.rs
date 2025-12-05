@@ -1,4 +1,5 @@
 use wasm_bindgen::prelude::*;
+use serde::{Serialize, Deserialize};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -23,6 +24,7 @@ impl std::ops::Neg for Direction {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize)]
 pub struct Tile {
     pub block: Option<Block>,
     pub space: Space
@@ -45,6 +47,7 @@ impl Tile {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize)]
 pub enum Space {
     Empty,
     Goal,
@@ -61,6 +64,7 @@ impl Space {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize)]
 pub struct Block {
     pub top: Side,
     pub bottom: Side,
@@ -70,6 +74,7 @@ pub struct Block {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize)]
 pub enum Side {
     Wall,
     Basic,
@@ -80,7 +85,7 @@ pub enum Side {
 #[wasm_bindgen]
 impl Block {
     #[wasm_bindgen]
-    pub fn from_tblr(top: &str, bottom: &str, left: &str, right: &str) -> Block {
+    pub fn from_trbl(top: &str, right: &str, bottom: &str, left: &str) -> Block {
         let parse = |s: &str| {
             match s {
                 "wallSide" => Side::Wall,

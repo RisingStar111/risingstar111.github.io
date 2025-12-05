@@ -1,8 +1,10 @@
 use wasm_bindgen::prelude::*;
 use crate::block::{Block, Direction, Side, Space, Tile};
+use serde::{Serialize, Deserialize};
 
 pub const DIRARRAY: [Direction; 4] = [Direction::Left, Direction::Up, Direction::Right, Direction::Down];
 
+#[derive(Serialize, Deserialize)]
 #[wasm_bindgen]
 pub struct Board {
     grid: Vec<Tile>,
@@ -29,6 +31,15 @@ impl Board {
     }
 
     #[wasm_bindgen]
+    pub fn from_serialized(data: &str) -> Board {
+        serde_json::from_str(&data).unwrap()
+    }
+    #[wasm_bindgen]
+    pub fn serialize(&self) -> String {
+        serde_json::to_string(&self).unwrap()
+    }
+
+    #[wasm_bindgen]
     pub fn clone(&self) -> Board {
         Board { grid: self.grid.clone(), width: self.width, height: self.height, player: self.player }
     }
@@ -52,12 +63,12 @@ impl Board {
         self.grid[index].set_space(new_space);
     }
     #[wasm_bindgen]
-    pub fn get_block_tblr(&self, index: usize) -> Option<Vec<String>> {
+    pub fn get_block_trbl(&self, index: usize) -> Option<Vec<String>> {
         let block = self.grid[index].get_block();
         if block.is_none() {return None}
         let block = block.unwrap();
         Some(
-            vec![block.top, block.bottom, block.left, block.right]
+            vec![block.top, block.right, block.bottom, block.left]
             .iter().map(|v| match *v {
                 Side::Wall => "wallSide".to_string(),
                 Side::Basic => "basicSide".to_string(),

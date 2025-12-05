@@ -200,21 +200,21 @@ export class Block {
     }
     /**
      * @param {string} top
+     * @param {string} right
      * @param {string} bottom
      * @param {string} left
-     * @param {string} right
      * @returns {Block}
      */
-    static from_tblr(top, bottom, left, right) {
+    static from_trbl(top, right, bottom, left) {
         const ptr0 = passStringToWasm0(top, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(bottom, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const ptr1 = passStringToWasm0(right, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(left, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const ptr2 = passStringToWasm0(bottom, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len2 = WASM_VECTOR_LEN;
-        const ptr3 = passStringToWasm0(right, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const ptr3 = passStringToWasm0(left, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len3 = WASM_VECTOR_LEN;
-        const ret = wasm.block_from_tblr(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
+        const ret = wasm.block_from_trbl(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
         return Block.__wrap(ret);
     }
 }
@@ -270,14 +270,24 @@ export class Board {
      * @param {number} index
      * @returns {string[] | undefined}
      */
-    get_block_tblr(index) {
-        const ret = wasm.board_get_block_tblr(this.__wbg_ptr, index);
+    get_block_trbl(index) {
+        const ret = wasm.board_get_block_trbl(this.__wbg_ptr, index);
         let v1;
         if (ret[0] !== 0) {
             v1 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
             wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
         }
         return v1;
+    }
+    /**
+     * @param {string} data
+     * @returns {Board}
+     */
+    static from_serialized(data) {
+        const ptr0 = passStringToWasm0(data, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.board_from_serialized(ptr0, len0);
+        return Board.__wrap(ret);
     }
     /**
      * @returns {Board}
@@ -344,6 +354,21 @@ export class Board {
     move_tile(index, dir, first) {
         const ret = wasm.board_move_tile(this.__wbg_ptr, index, dir, first);
         return ret;
+    }
+    /**
+     * @returns {string}
+     */
+    serialize() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.board_serialize(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * @param {number} index

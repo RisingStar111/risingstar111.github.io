@@ -76,6 +76,8 @@
                     <label for="height">Height</label>
                     <br>
                     <button id="resizeButton">Resize</button>
+                    <br>
+                    <button id="dataButton">Level data</button>
                 </div>
                 <gridSelect id="spaceSelection">
                     <div class="sprite static" data-id="emptySpace"></div>
@@ -95,6 +97,12 @@
             <button id="restartButton">Restart</button>
         </div>
     </div>
+    <dialog id="levelDataDialog">
+        <textarea id="levelDataText"></textarea>
+        <form method="dialog">
+            <button id="loadFromDataButton">Close</button>
+        </form>
+    </dialog>
 
     <script type="module">
         import init, { Board, Block, Direction, Space } from './pkg/hello_wasm.js';
@@ -106,7 +114,7 @@
             // create wasm boards and handlers
             let editorBoard = newBoard(5, 5);
             let playBoard = newBoard(5, 5);
-            // top, left, right, bottom
+            // top, right, bottom, left
             // definitely sacrifices some clarity but i like list manipulation what can i say
             let selectedSides = ["wallSide", "wallSide", "wallSide", "wallSide"];
             let space = "emptySpace";
@@ -130,6 +138,22 @@
             document.getElementById("playButton").onclick = playLevel;
             document.getElementById("editButton").onclick = editLevel;
             document.getElementById("resizeButton").onclick = resizeLevel;
+            document.getElementById("dataButton").onclick = displayLevelData;
+            document.getElementById("loadFromDataButton").onclick = loadFromData;
+
+            function displayLevelData() {
+                document.getElementById("levelDataDialog").showModal();
+                const levelTextArea = document.getElementById("levelDataText");
+                const currentLevelData = editorBoard.serialize();
+                levelTextArea.innerHTML = currentLevelData;
+                levelTextArea.focus();
+                levelTextArea.select();
+            }
+            function loadFromData() {
+                const levelText = document.getElementById("levelDataText").value;
+                editorBoard = Board.from_serialized(levelText);
+                drawBoard(editorBoard);
+            }
 
             function resizeLevel() {
                 const newWidth = parseInt(document.getElementById("width").value);
@@ -183,12 +207,11 @@
                 for (let x = 0; x < width; x++) {
                     for (let y = 0; y < height; y++) {
                         const index = x + y * width;
-                        // the inconsistent block ordering being annoying but who can guess if i'll bother to change it
-                        const block = board.get_block_tblr(index);
+                        const block = board.get_block_trbl(index);
                         const space = board.get_space(index);
                         drawSpace(space, [x, y], width, height, ctx, canvas);
                         if (block != null) {
-                            drawBlock([block[0], block[2], block[3], block[1]], [x, y], width, height, ctx, canvas);
+                            drawBlock(block, [x, y], width, height, ctx, canvas);
                         }
                     }
                 }
@@ -239,8 +262,7 @@
                     selector.querySelectorAll(".sprite")
                         .forEach((item) => {
                             const itemCtx = item.getContext('2d');
-                            // (reorder i for rotations cuz i picked the least convenient ordering possible apparently)
-                            drawTile(sideOffsets[item.dataset.id], 0, [0, 0], ([0,3,1,2][i])*Math.PI/2, 1, 1, itemCtx, item);
+                            drawTile(sideOffsets[item.dataset.id], 0, [0, 0], i*Math.PI/2, 1, 1, itemCtx, item);
                         });
                 }
             } // end initialise side selector
@@ -306,7 +328,7 @@
                     const clickY = (e.clientY - rect.top) / canvas.height;
                     const clickIndex = editorBoard.get_index(clickX, clickY);
                     if (placeLayer == "block") {
-                        editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_tblr(selectedSides[0], selectedSides[3], selectedSides[1], selectedSides[2]));
+                        editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_trbl(selectedSides[0], selectedSides[1], selectedSides[2], selectedSides[3]));
                     } else if (placeLayer == "space") {
                         if (space == "playerTile") {
                             editorBoard.set_block(clickIndex, null);
@@ -352,10 +374,9 @@
             "playerTile" : 68,
             }
         function drawBlock(blockSides, gridPos, gridWidth, gridHeight, ctx, canvas) {
-            drawTile(sideOffsets[blockSides[0]], 0, gridPos, 0, gridWidth, gridHeight, ctx, canvas);
-            drawTile(sideOffsets[blockSides[1]], 0, gridPos, 3*Math.PI/2, gridWidth, gridHeight, ctx, canvas);
-            drawTile(sideOffsets[blockSides[2]], 0, gridPos, Math.PI/2, gridWidth, gridHeight, ctx, canvas);
-            drawTile(sideOffsets[blockSides[3]], 0, gridPos, Math.PI, gridWidth, gridHeight, ctx, canvas);
+            for (let i = 0; i < 4; i++) {
+                drawTile(sideOffsets[blockSides[i]], 0, gridPos, i*Math.PI/2, gridWidth, gridHeight, ctx, canvas);
+            }
         }
         function drawSpace(space, gridPos, gridWidth, gridHeight, ctx, canvas) {
             drawTile(spaceOffsets[space], 34, gridPos, 0, gridWidth, gridHeight, ctx, canvas)

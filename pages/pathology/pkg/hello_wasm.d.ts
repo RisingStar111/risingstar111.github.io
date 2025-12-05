@@ -6,7 +6,7 @@ export class Block {
   free(): void;
   [Symbol.dispose](): void;
   pushed_side(move_dir: Direction): Side;
-  static from_tblr(top: string, bottom: string, left: string, right: string): Block;
+  static from_trbl(top: string, right: string, bottom: string, left: string): Block;
   top: Side;
   bottom: Side;
   left: Side;
@@ -21,7 +21,8 @@ export class Board {
   get_player(): number;
   set_player(index: number): void;
   move_player(dir: Direction): StepOutcome;
-  get_block_tblr(index: number): string[] | undefined;
+  get_block_trbl(index: number): string[] | undefined;
+  static from_serialized(data: string): Board;
   clone(): Board;
   static default(width: number, height: number): Board;
   get_tile(index: number): Tile;
@@ -29,6 +30,7 @@ export class Board {
   get_space(index: number): string;
   get_width(): number;
   move_tile(index: number, dir: Direction, first: boolean): StepOutcome;
+  serialize(): string;
   set_block(index: number, new_block?: Block | null): void;
   set_space(index: number, new_space: Space): void;
 }
@@ -73,21 +75,6 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly __wbg_board_free: (a: number, b: number) => void;
-  readonly board_clone: (a: number) => number;
-  readonly board_default: (a: number, b: number) => number;
-  readonly board_get_block_tblr: (a: number, b: number) => [number, number];
-  readonly board_get_height: (a: number) => number;
-  readonly board_get_index: (a: number, b: number, c: number) => number;
-  readonly board_get_player: (a: number) => number;
-  readonly board_get_space: (a: number, b: number) => [number, number];
-  readonly board_get_tile: (a: number, b: number) => number;
-  readonly board_get_width: (a: number) => number;
-  readonly board_move_player: (a: number, b: number) => number;
-  readonly board_move_tile: (a: number, b: number, c: number, d: number) => number;
-  readonly board_set_block: (a: number, b: number, c: number) => void;
-  readonly board_set_player: (a: number, b: number) => void;
-  readonly board_set_space: (a: number, b: number, c: number) => void;
   readonly __wbg_block_free: (a: number, b: number) => void;
   readonly __wbg_get_block_bottom: (a: number) => number;
   readonly __wbg_get_block_left: (a: number) => number;
@@ -102,13 +89,30 @@ export interface InitOutput {
   readonly __wbg_set_tile_block: (a: number, b: number) => void;
   readonly __wbg_set_tile_space: (a: number, b: number) => void;
   readonly __wbg_tile_free: (a: number, b: number) => void;
-  readonly block_from_tblr: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+  readonly block_from_trbl: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
   readonly block_pushed_side: (a: number, b: number) => number;
+  readonly __wbg_board_free: (a: number, b: number) => void;
+  readonly board_clone: (a: number) => number;
+  readonly board_default: (a: number, b: number) => number;
+  readonly board_from_serialized: (a: number, b: number) => number;
+  readonly board_get_block_trbl: (a: number, b: number) => [number, number];
+  readonly board_get_height: (a: number) => number;
+  readonly board_get_index: (a: number, b: number, c: number) => number;
+  readonly board_get_player: (a: number) => number;
+  readonly board_get_space: (a: number, b: number) => [number, number];
+  readonly board_get_tile: (a: number, b: number) => number;
+  readonly board_get_width: (a: number) => number;
+  readonly board_move_player: (a: number, b: number) => number;
+  readonly board_move_tile: (a: number, b: number, c: number, d: number) => number;
+  readonly board_serialize: (a: number) => [number, number];
+  readonly board_set_block: (a: number, b: number, c: number) => void;
+  readonly board_set_player: (a: number, b: number) => void;
+  readonly board_set_space: (a: number, b: number, c: number) => void;
   readonly __wbindgen_externrefs: WebAssembly.Table;
-  readonly __externref_drop_slice: (a: number, b: number) => void;
-  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+  readonly __externref_drop_slice: (a: number, b: number) => void;
+  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_start: () => void;
 }
 
