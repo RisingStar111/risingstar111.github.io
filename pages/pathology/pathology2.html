@@ -33,7 +33,7 @@
             gap: 5px;
         }
         .sprite {
-            border: 2px solid white;
+            border: 1px solid #ccc;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             width: 32px;
@@ -79,11 +79,14 @@
                     <br>
                     <button id="dataButton">Level data</button>
                 </div>
-                <gridSelect id="spaceSelection">
-                    <div class="sprite static" data-id="emptySpace"></div>
-                    <div class="sprite static" data-id="goalSpace"></div>
-                    <div class="sprite static" data-id="playerTile"></div>
-                </gridSelect>
+                <div>
+                    <p style="float: left">None Goal Player</p>
+                    <gridSelect id="spaceSelection" style="float: left">
+                        <div class="sprite static" data-id="emptySpace"></div>
+                        <div class="sprite static" data-id="goalSpace"></div>
+                        <div class="sprite static" data-id="playerTile"></div>
+                    </gridSelect>
+                </div>
             </div>
         </div>
         <div id="playControls" style="display: none">
