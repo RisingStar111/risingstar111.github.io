@@ -58,3 +58,4 @@ plugins:
 
 exclude:
   - rust/
+  - buildRust.sh

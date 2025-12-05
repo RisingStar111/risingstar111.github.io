@@ -29,7 +29,7 @@
         /* gpt-ed grid selection */
         gridSelect {
             display: grid;
-            grid-template-columns: repeat(4, 32px);
+            grid-template-columns: repeat(5, 32px);
             gap: 5px;
         }
         .sprite {
@@ -225,7 +225,7 @@
             // Initialise side selector
             {
                 // insert side names
-                let innerHtml = "<p style=\"float: right\">Wall Basic Ice Swap</p>";
+                let innerHtml = "<p style=\"float: right\">Wall Basic Ice Swap Hole</p>";
                 // insert grid elements per side
                 const sides = ["top", "left", "right", "bottom"];
                 innerHtml += sides.map((side) => {
@@ -234,6 +234,7 @@
                             <canvas width="32" height="32" class="sprite" data-id="basicSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="iceSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="swapSide"></canvas>
+                            <canvas width="32" height="32" class="sprite" data-id="holeSide"></canvas>
                         </gridSelect>`
                     })
                     .join('');
@@ -370,6 +371,7 @@
             "basicSide" : 0,
             "iceSide" : 34,
             "swapSide" : 102,
+            "holeSide" : 136,
             }
         const spaceOffsets = {
             "emptySpace" : 0,

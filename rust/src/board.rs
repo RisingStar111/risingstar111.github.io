@@ -74,6 +74,7 @@ impl Board {
                 Side::Basic => "basicSide".to_string(),
                 Side::Ice => "iceSide".to_string(),
                 Side::Swap => "swapSide".to_string(),
+                Side::Hole => "holeSide".to_string(),
             })
             .collect()
         )
@@ -196,6 +197,17 @@ impl Board {
                         moving_tile.set_block(*into_tile.get_block());
                         self.get_tile_mut(into_index).set_block(temp_block);
                     },
+                    Side::Hole => {
+                        // if a block did the pushing
+                        if index != self.player {
+                            // remove both holeblock and movingblock
+                            self.set_block(index, None);
+                            self.set_block(into_index, None);
+                        } else {
+                            // block player
+                            return StepOutcome::Blocked
+                        }
+                    }
                 }
             } else {
                 // tile doesn't have a block

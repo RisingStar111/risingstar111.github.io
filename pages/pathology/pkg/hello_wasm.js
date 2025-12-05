@@ -403,13 +403,14 @@ export const Direction = Object.freeze({
 });
 
 /**
- * @enum {0 | 1 | 2 | 3}
+ * @enum {0 | 1 | 2 | 3 | 4}
  */
 export const Side = Object.freeze({
     Wall: 0, "0": "Wall",
     Basic: 1, "1": "Basic",
     Ice: 2, "2": "Ice",
     Swap: 3, "3": "Swap",
+    Hole: 4, "4": "Hole",
 });
 
 /**
