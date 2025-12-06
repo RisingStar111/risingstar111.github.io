@@ -190,6 +190,7 @@
                 document.getElementById("editorControls").style.display = "none";
 
                 playHistory = BoardHistory.from_board(editorBoard.clone());
+                onStepChange(0);
                 restartLevel();
                 playing = true;
             }
