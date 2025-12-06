@@ -162,19 +162,6 @@
                 const newWidth = parseInt(document.getElementById("width").value);
                 const newHeight = parseInt(document.getElementById("height").value);
 
-                // resize canvas to a square ratio
-                const baseSide = 320; // change this when allowing resizeable canvas
-                let ratio = newWidth / newHeight;
-                if (ratio > 1) {
-                    // shrink height
-                    canvas.setAttribute("width", baseSide);
-                    canvas.setAttribute("height",  baseSide / ratio);
-                } else {
-                    // shrink width
-                    canvas.setAttribute("width", ratio * baseSide);
-                    canvas.setAttribute("height",  baseSide);
-                }
-
                 editorBoard = newBoard(newWidth, newHeight);
                 drawBoard(editorBoard);
             }
@@ -205,6 +192,19 @@
                 drawBlock(selectedSides, [0, 0], 1, 1, previewCtx, previewCanvas);
             }
             function drawBoard(board) {
+                // resize canvas to a square ratio
+                const baseSide = 320; // change this when allowing resizeable canvas
+                let ratio = newWidth / newHeight;
+                if (ratio > 1) {
+                    // shrink height
+                    canvas.setAttribute("width", baseSide);
+                    canvas.setAttribute("height",  baseSide / ratio);
+                } else {
+                    // shrink width
+                    canvas.setAttribute("width", ratio * baseSide);
+                    canvas.setAttribute("height",  baseSide);
+                }
+                
                 const width = board.get_width();
                 const height = board.get_height();
                 for (let x = 0; x < width; x++) {
