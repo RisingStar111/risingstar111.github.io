@@ -2,8 +2,7 @@ use wasm_bindgen::prelude::*;
 use crate::block::{Block, Direction, Side, Space, Tile};
 use serde::{Serialize, Deserialize};
 
-pub const DIRARRAY: [Direction; 4] = [Direction::Left, Direction::Up, Direction::Right, Direction::Down];
-
+#[derive(PartialEq)]
 #[derive(Serialize, Deserialize)]
 #[wasm_bindgen]
 pub struct Board {

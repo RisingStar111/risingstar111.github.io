@@ -98,6 +98,9 @@
             <button id="moveRightButton">→</button>
             <br>
             <button id="restartButton">Restart</button>
+            <br>
+            <p id="stepCountText">Step: 0</p>
+            <input type="range" min="0" max="0" id="stepSlider">
         </div>
     </div>
     <dialog id="levelDataDialog">
@@ -108,7 +111,7 @@
     </dialog>
 
     <script type="module">
-        import init, { Board, Block, Direction, Space } from './pkg/hello_wasm.js';
+        import init, { Board, Block, Direction, Space, BoardHistory } from './pkg/hello_wasm.js';
 
         async function run() {
             // Initialise the wasm - loads into memory but functions are only available while in this scope
@@ -116,7 +119,7 @@
 
             // create wasm boards and handlers
             let editorBoard = newBoard(5, 5);
-            let playBoard = newBoard(5, 5);
+            let playHistory = null;
             // top, right, bottom, left
             // definitely sacrifices some clarity but i like list manipulation what can i say
             let selectedSides = ["wallSide", "wallSide", "wallSide", "wallSide"];
@@ -143,6 +146,18 @@
             document.getElementById("resizeButton").onclick = resizeLevel;
             document.getElementById("dataButton").onclick = displayLevelData;
             document.getElementById("loadFromDataButton").onclick = loadFromData;
+            document.getElementById("stepSlider").oninput = onSliderChange;
+
+            function onSliderChange() {
+                onStepChange(document.getElementById("stepSlider").value);
+            }
+            function onStepChange(new_step) {
+                document.getElementById("stepSlider").max = playHistory.get_history_length() - 1;
+                document.getElementById("stepSlider").value = new_step;
+                document.getElementById("stepCountText").innerHTML = `Steps: ${new_step}`;
+                playHistory.current_step = new_step;
+                drawBoard(playHistory.get_current_board());
+            }
 
             function displayLevelData() {
                 document.getElementById("levelDataDialog").showModal();
@@ -166,14 +181,15 @@
                 drawBoard(editorBoard);
             }
             function restartLevel() {
-                playBoard = editorBoard.clone();
-                drawBoard(playBoard);
+                playHistory.current_step = 0;
+                drawBoard(playHistory.get_current_board());
             }
 
             function playLevel() {
                 document.getElementById("playControls").style.display = "block";
                 document.getElementById("editorControls").style.display = "none";
 
+                playHistory = BoardHistory.from_board(editorBoard.clone());
                 restartLevel();
                 playing = true;
             }
@@ -298,8 +314,8 @@
                 spaceSelection.querySelectorAll(".sprite.selected").forEach(el => el.classList.remove("selected"));})
 
             function moveHandler(direction) {
-                playBoard.move_player(direction);
-                drawBoard(playBoard);
+                playHistory.step(direction);
+                onStepChange(playHistory.current_step);
             }
             
             document.addEventListener('keydown', function (event) {

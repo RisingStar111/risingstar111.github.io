@@ -23,7 +23,7 @@ impl std::ops::Neg for Direction {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[derive(Serialize, Deserialize)]
 pub struct Tile {
     pub block: Option<Block>,
@@ -46,7 +46,7 @@ impl Tile {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[derive(Serialize, Deserialize)]
 pub enum Space {
     Empty,
@@ -63,7 +63,7 @@ impl Space {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[derive(Serialize, Deserialize)]
 pub struct Block {
     pub top: Side,
@@ -73,7 +73,7 @@ pub struct Block {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[derive(Serialize, Deserialize)]
 pub enum Side {
     Wall,

@@ -35,6 +35,17 @@ export class Board {
   set_space(index: number, new_space: Space): void;
 }
 
+export class BoardHistory {
+  private constructor();
+  free(): void;
+  [Symbol.dispose](): void;
+  static from_board(board: Board): BoardHistory;
+  get_current_board(): Board;
+  get_history_length(): number;
+  step(dir: Direction): void;
+  current_step: number;
+}
+
 export enum Direction {
   Down = 0,
   Right = 1,
@@ -92,6 +103,13 @@ export interface InitOutput {
   readonly __wbg_tile_free: (a: number, b: number) => void;
   readonly block_from_trbl: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
   readonly block_pushed_side: (a: number, b: number) => number;
+  readonly __wbg_boardhistory_free: (a: number, b: number) => void;
+  readonly __wbg_get_boardhistory_current_step: (a: number) => number;
+  readonly __wbg_set_boardhistory_current_step: (a: number, b: number) => void;
+  readonly boardhistory_from_board: (a: number) => number;
+  readonly boardhistory_get_current_board: (a: number) => number;
+  readonly boardhistory_get_history_length: (a: number) => number;
+  readonly boardhistory_step: (a: number, b: number) => void;
   readonly __wbg_board_free: (a: number, b: number) => void;
   readonly board_clone: (a: number) => number;
   readonly board_default: (a: number, b: number) => number;

@@ -1,0 +1,61 @@
+use wasm_bindgen::prelude::*;
+use crate::{block::Direction, board::{Board, StepOutcome}};
+
+
+// the board history contains a minimal representation of the traversal of the level
+// the undo stack (handled js side) contains a representation of the player traversal (may be unoptimal) in terms of the history (edge cases for collapse then rewind may be scuffed but eh)
+#[wasm_bindgen]
+pub struct BoardHistory {
+    board_stack: Vec<Board>,
+    pub current_step: usize,
+}
+
+#[wasm_bindgen]
+impl BoardHistory {
+    #[wasm_bindgen]
+    pub fn from_board(board: Board) -> BoardHistory {
+        BoardHistory { board_stack: vec![board], current_step: 0 }
+    }
+    #[wasm_bindgen]
+    pub fn step(&mut self, dir: Direction) {
+        assert!(self.current_step < self.board_stack.len());
+        // attempt to get board after moving
+        let mut moving_board = self.board_stack[self.current_step].clone();
+        if moving_board.move_player(dir) != StepOutcome::Stepped {
+            // player didn't move // note while ok atm, this may break if player can interact without moving
+            return
+        }
+        
+        // check for seeing this board in the stack
+        for (index, stack_board) in self.board_stack.iter().enumerate() {
+            if moving_board == *stack_board {
+                if index <= self.current_step {
+                    // change the step if seen earlier
+                    self.current_step = index;
+                } else {
+                    // collapse the stack if seen later
+                    self.current_step += 1;
+                    self.board_stack.drain(self.current_step .. index);
+                }
+                // don't add a new board
+                return
+            }
+        }
+        // not seen in the stack
+        self.current_step += 1;
+        if self.current_step == self.board_stack.len() {
+            self.board_stack.push(moving_board);
+        } else {
+            self.board_stack[self.current_step] = moving_board;
+        }
+    }
+
+    #[wasm_bindgen]
+    pub fn get_current_board(&self) -> Board {
+        self.board_stack[self.current_step].clone()
+    }
+    #[wasm_bindgen]
+    pub fn get_history_length(&self) -> usize {
+        self.board_stack.len()
+    }
+}

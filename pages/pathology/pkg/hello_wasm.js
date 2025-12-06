@@ -116,6 +116,10 @@ const BoardFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_board_free(ptr >>> 0, 1));
 
+const BoardHistoryFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_boardhistory_free(ptr >>> 0, 1));
+
 const TileFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_tile_free(ptr >>> 0, 1));
@@ -391,6 +395,70 @@ export class Board {
     }
 }
 if (Symbol.dispose) Board.prototype[Symbol.dispose] = Board.prototype.free;
+
+export class BoardHistory {
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(BoardHistory.prototype);
+        obj.__wbg_ptr = ptr;
+        BoardHistoryFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        BoardHistoryFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_boardhistory_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get current_step() {
+        const ret = wasm.__wbg_get_boardhistory_current_step(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set current_step(arg0) {
+        wasm.__wbg_set_boardhistory_current_step(this.__wbg_ptr, arg0);
+    }
+    /**
+     * @param {Board} board
+     * @returns {BoardHistory}
+     */
+    static from_board(board) {
+        _assertClass(board, Board);
+        var ptr0 = board.__destroy_into_raw();
+        const ret = wasm.boardhistory_from_board(ptr0);
+        return BoardHistory.__wrap(ret);
+    }
+    /**
+     * @returns {Board}
+     */
+    get_current_board() {
+        const ret = wasm.boardhistory_get_current_board(this.__wbg_ptr);
+        return Board.__wrap(ret);
+    }
+    /**
+     * @returns {number}
+     */
+    get_history_length() {
+        const ret = wasm.boardhistory_get_history_length(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @param {Direction} dir
+     */
+    step(dir) {
+        wasm.boardhistory_step(this.__wbg_ptr, dir);
+    }
+}
+if (Symbol.dispose) BoardHistory.prototype[Symbol.dispose] = BoardHistory.prototype.free;
 
 /**
  * @enum {0 | 1 | 2 | 3}
