@@ -208,7 +208,9 @@
             }
 
             function undoStep() {
-                onStepChange(playHistory.current_step - 1);
+                if (playHistory.current_step > 0) {
+                    onStepChange(playHistory.current_step - 1);
+                }
             }
 
             function drawBlockPreview() {
