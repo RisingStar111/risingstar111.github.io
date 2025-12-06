@@ -98,6 +98,7 @@
             <button id="moveRightButton">→</button>
             <br>
             <button id="restartButton">Restart</button>
+            <button id="undoButton">Undo</button>
             <br>
             <p id="stepCountText">Step: 0</p>
             <input type="range" min="0" max="0" id="stepSlider">
@@ -141,6 +142,7 @@
             document.getElementById("moveLeftButton").onclick = () => moveHandler(Direction.Left);
             document.getElementById("moveRightButton").onclick = () => moveHandler(Direction.Right);
             document.getElementById("restartButton").onclick = restartLevel;
+            document.getElementById("undoButton").onclick = undoStep;
             document.getElementById("playButton").onclick = playLevel;
             document.getElementById("editButton").onclick = editLevel;
             document.getElementById("resizeButton").onclick = resizeLevel;
@@ -203,6 +205,10 @@
             }
             function newBoard(width, height) {
                 return Board.default(width, height)
+            }
+
+            function undoStep() {
+                onStepChange(playHistory.current_step - 1);
             }
 
             function drawBlockPreview() {
@@ -338,6 +344,10 @@
 
                     if (event.code == "KeyR") {
                         restartLevel();
+                    }
+
+                    if (event.code == "KeyZ") {
+                        undoStep();
                     }
                 }
             });

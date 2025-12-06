@@ -3,7 +3,7 @@ use crate::{block::Direction, board::{Board, StepOutcome}};
 
 
 // the board history contains a minimal representation of the traversal of the level
-// the undo stack (handled js side) contains a representation of the player traversal (may be unoptimal) in terms of the history (edge cases for collapse then rewind may be scuffed but eh)
+// this means naive undoing doesn't undo the 'visual' traversal
 #[wasm_bindgen]
 pub struct BoardHistory {
     board_stack: Vec<Board>,
