@@ -270,6 +270,15 @@ export class Board {
         const ret = wasm.board_move_player(this.__wbg_ptr, dir);
         return ret;
     }
+    add_side_top() {
+        wasm.board_add_side_top(this.__wbg_ptr);
+    }
+    add_side_left() {
+        wasm.board_add_side_left(this.__wbg_ptr);
+    }
+    add_side_right() {
+        wasm.board_add_side_right(this.__wbg_ptr);
+    }
     /**
      * @param {number} index
      * @returns {string[] | undefined}
@@ -283,6 +292,9 @@ export class Board {
         }
         return v1;
     }
+    add_side_bottom() {
+        wasm.board_add_side_bottom(this.__wbg_ptr);
+    }
     /**
      * @param {string} data
      * @returns {Board}
@@ -292,6 +304,18 @@ export class Board {
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.board_from_serialized(ptr0, len0);
         return Board.__wrap(ret);
+    }
+    remove_side_top() {
+        wasm.board_remove_side_top(this.__wbg_ptr);
+    }
+    remove_side_left() {
+        wasm.board_remove_side_left(this.__wbg_ptr);
+    }
+    remove_side_right() {
+        wasm.board_remove_side_right(this.__wbg_ptr);
+    }
+    remove_side_bottom() {
+        wasm.board_remove_side_bottom(this.__wbg_ptr);
     }
     /**
      * @returns {Board}

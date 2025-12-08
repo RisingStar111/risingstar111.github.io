@@ -31,6 +31,9 @@ pub struct Tile {
 }
 
 impl Tile {
+    pub fn default() -> Tile {
+        Tile {block: None, space: Space::Empty}
+    }
     pub fn get_block(&self) -> &Option<Block> {
         &self.block
     }

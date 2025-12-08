@@ -26,7 +26,7 @@ pub enum StepOutcome {
 impl Board {
     #[wasm_bindgen]
     pub fn default(width: usize, height: usize) -> Board {
-        Board { grid: vec![Tile {block: None, space: Space::Empty}; width * height], width, height, player: 0 }
+        Board { grid: vec![Tile::default(); width * height], width, height, player: 0 }
     }
 
     #[wasm_bindgen]
@@ -60,6 +60,64 @@ impl Board {
     #[wasm_bindgen]
     pub fn set_space(&mut self, index: usize, new_space: Space) {
         self.grid[index].set_space(new_space);
+    }
+    #[wasm_bindgen]
+    pub fn add_side_top(&mut self) {
+        self.height += 1;
+        self.grid.splice(0..0, vec![Tile::default(); self.width]);
+        self.player += self.width;
+    }
+    #[wasm_bindgen]
+    pub fn add_side_bottom(&mut self) {
+        self.height += 1;
+        self.grid.append(&mut vec![Tile::default(); self.width]);
+    }
+    #[wasm_bindgen]
+    pub fn add_side_left(&mut self) {
+        self.player += self.y_of(self.player) + 1;
+        self.width += 1;
+        // inefficient realloc but low cost
+        for i in 0..self.height {
+            self.grid.insert(i*self.width, Tile::default());
+        }
+    }
+    #[wasm_bindgen]
+    pub fn add_side_right(&mut self) {
+        self.add_side_left();
+        self.grid.remove(0);
+        self.grid.push(Tile::default());
+        self.player -= 1;
+    }
+    #[wasm_bindgen]
+    pub fn remove_side_top(&mut self) {
+        if self.height <= 1 {return}
+        self.grid.splice(0..self.width, vec![]);
+        self.height -= 1;
+        self.player -= self.width;
+    }
+    #[wasm_bindgen]
+    pub fn remove_side_bottom(&mut self) {
+        if self.height <= 1 {return}
+        self.grid.truncate(self.width*self.height);
+        self.height -= 1;
+    }
+    #[wasm_bindgen]
+    pub fn remove_side_left(&mut self) {
+        if self.width <= 1 {return}
+        self.player -= self.y_of(self.player) + 1;
+        // inefficient realloc but low cost
+        self.width -= 1;
+        for i in 0..self.height {
+            self.grid.remove(i*self.width);
+        }
+    }
+    #[wasm_bindgen]
+    pub fn remove_side_right(&mut self) {
+        if self.width <= 1 {return}
+        self.grid.insert(0, Tile::default());
+        self.grid.pop();
+        self.remove_side_left();
+        self.player += 1;
     }
     #[wasm_bindgen]
     pub fn get_block_trbl(&self, index: usize) -> Option<Vec<String>> {

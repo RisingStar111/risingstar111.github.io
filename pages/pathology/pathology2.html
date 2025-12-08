@@ -26,6 +26,9 @@
             padding: 10px 20px;
             margin: 5px;
         }
+        .small {
+            padding: 5px 5px;
+        }
         /* gpt-ed grid selection */
         gridSelect {
             display: grid;
@@ -70,14 +73,29 @@
                     <input type="checkbox" id="clearPlacement">
                     <label for="clearPlacement">Remove blocks</label>
                     <br>
-                    <input type="number" id="width" min="1" max="20" value="5">
+                    <input type="number" id="width" min="1" value="5">
                     <label for="width">Width</label>
-                    <input type="number" id="height" min="1" max="20" value="5">
+                    <input type="number" id="height" min="1" value="5">
                     <label for="height">Height</label>
                     <br>
-                    <button id="resizeButton">Resize</button>
+                    <button id="resizeButton">Reset</button>
                     <br>
                     <button id="dataButton">Level data</button>
+                    <br>
+                    <button class="small" id="addTop">+</button>
+                    Top
+                    <button class="small" id="subTop">-</button>
+                    <br>
+                    <button class="small" id="addLeft">+</button>
+                    Left
+                    <button class="small" id="subLeft">-</button>
+                    <button class="small" id="addRight">+</button>
+                    Right
+                    <button class="small" id="subRight">-</button>
+                    <br>
+                    <button class="small" id="addBottom">+</button>
+                    Bottom
+                    <button class="small" id="subBottom">-</button>
                 </div>
                 <div>
                     <p style="float: left">None Goal Player</p>
@@ -149,6 +167,29 @@
             document.getElementById("dataButton").onclick = displayLevelData;
             document.getElementById("loadFromDataButton").onclick = loadFromData;
             document.getElementById("stepSlider").oninput = onSliderChange;
+            document.getElementById("addTop").onclick = () => add_side("top");
+            document.getElementById("subTop").onclick = () => remove_side("top");
+            document.getElementById("addLeft").onclick = () => add_side("left");
+            document.getElementById("subLeft").onclick = () => remove_side("left");
+            document.getElementById("addRight").onclick = () => add_side("right");
+            document.getElementById("subRight").onclick = () => remove_side("right");
+            document.getElementById("addBottom").onclick = () => add_side("bottom");
+            document.getElementById("subBottom").onclick = () => remove_side("bottom");
+
+            function add_side(side) {
+                if (side == "top") {editorBoard.add_side_top()}
+                if (side == "left") {editorBoard.add_side_left()}
+                if (side == "right") {editorBoard.add_side_right()}
+                if (side == "bottom") {editorBoard.add_side_bottom()}
+                drawBoard(editorBoard);
+            }
+            function remove_side(side) {
+                if (side == "top") {editorBoard.remove_side_top()}
+                if (side == "left") {editorBoard.remove_side_left()}
+                if (side == "right") {editorBoard.remove_side_right()}
+                if (side == "bottom") {editorBoard.remove_side_bottom()}
+                drawBoard(editorBoard);
+            }
 
             function onSliderChange() {
                 onStepChange(document.getElementById("stepSlider").value);
@@ -188,6 +229,11 @@
             }
 
             function playLevel() {
+                if (editorBoard.get_player() >= editorBoard.get_width() * editorBoard.get_height()) {
+                    // player has been removed probably by resizing // underflow is active and player is a usize
+                    window.prompt("Level must have a player");
+                    return
+                }
                 document.getElementById("playControls").style.display = "block";
                 document.getElementById("editorControls").style.display = "none";
 
