@@ -462,6 +462,14 @@ export class BoardHistory {
         return BoardHistory.__wrap(ret);
     }
     /**
+     * @param {Board} new_board
+     */
+    add_not_seen(new_board) {
+        _assertClass(new_board, Board);
+        var ptr0 = new_board.__destroy_into_raw();
+        wasm.boardhistory_add_not_seen(this.__wbg_ptr, ptr0);
+    }
+    /**
      * @returns {Board}
      */
     get_current_board() {

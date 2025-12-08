@@ -45,6 +45,7 @@ export const board_set_space: (a: number, b: number, c: number) => void;
 export const __wbg_boardhistory_free: (a: number, b: number) => void;
 export const __wbg_get_boardhistory_current_step: (a: number) => number;
 export const __wbg_set_boardhistory_current_step: (a: number, b: number) => void;
+export const boardhistory_add_not_seen: (a: number, b: number) => void;
 export const boardhistory_from_board: (a: number) => number;
 export const boardhistory_get_current_board: (a: number) => number;
 export const boardhistory_get_history_length: (a: number) => number;

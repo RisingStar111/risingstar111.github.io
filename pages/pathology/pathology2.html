@@ -78,6 +78,8 @@
                     <input type="number" id="height" min="1" value="5">
                     <label for="height">Height</label>
                     <br>
+                    <input type="range" min="0" max="0" id="editorSlider">
+                    <br>
                     <button id="resizeButton">Reset</button>
                     <br>
                     <button id="dataButton">Level data</button>
@@ -138,6 +140,7 @@
 
             // create wasm boards and handlers
             let editorBoard = newBoard(5, 5);
+            let editorHistory = BoardHistory.from_board(editorBoard.clone());
             let playHistory = null;
             // top, right, bottom, left
             // definitely sacrifices some clarity but i like list manipulation what can i say
@@ -167,6 +170,7 @@
             document.getElementById("dataButton").onclick = displayLevelData;
             document.getElementById("loadFromDataButton").onclick = loadFromData;
             document.getElementById("stepSlider").oninput = onSliderChange;
+            document.getElementById("editorSlider").oninput = onSliderChange;
             document.getElementById("addTop").onclick = () => add_side("top");
             document.getElementById("subTop").onclick = () => remove_side("top");
             document.getElementById("addLeft").onclick = () => add_side("left");
@@ -181,18 +185,24 @@
                 if (side == "left") {editorBoard.add_side_left()}
                 if (side == "right") {editorBoard.add_side_right()}
                 if (side == "bottom") {editorBoard.add_side_bottom()}
-                drawBoard(editorBoard);
+                editorHistory.add_not_seen(editorBoard.clone());
+                onEditorChange(editorHistory.current_step);
             }
             function remove_side(side) {
                 if (side == "top") {editorBoard.remove_side_top()}
                 if (side == "left") {editorBoard.remove_side_left()}
                 if (side == "right") {editorBoard.remove_side_right()}
                 if (side == "bottom") {editorBoard.remove_side_bottom()}
-                drawBoard(editorBoard);
+                editorHistory.add_not_seen(editorBoard.clone());
+                onEditorChange(editorHistory.current_step);
             }
 
             function onSliderChange() {
-                onStepChange(document.getElementById("stepSlider").value);
+                if (playing) {
+                    onStepChange(document.getElementById("stepSlider").value);
+                } else {
+                    onEditorChange(document.getElementById("editorSlider").value);
+                }
             }
             function onStepChange(new_step) {
                 document.getElementById("stepSlider").max = playHistory.get_history_length() - 1;
@@ -200,6 +210,13 @@
                 document.getElementById("stepCountText").innerHTML = `Steps: ${new_step}`;
                 playHistory.current_step = new_step;
                 drawBoard(playHistory.get_current_board());
+            }
+            function onEditorChange(new_step) {
+                document.getElementById("editorSlider").max = editorHistory.get_history_length() - 1;
+                document.getElementById("editorSlider").value = new_step;
+                editorHistory.current_step = new_step;
+                editorBoard = editorHistory.get_current_board();
+                drawBoard(editorHistory.get_current_board());
             }
 
             function displayLevelData() {
@@ -254,8 +271,14 @@
             }
 
             function undoStep() {
-                if (playHistory.current_step > 0) {
-                    onStepChange(playHistory.current_step - 1);
+                if (playing) {
+                    if (playHistory.current_step > 0) {
+                        onStepChange(playHistory.current_step - 1);
+                    }
+                } else {
+                    if (editorHistory.current_step > 0) {
+                        onEditorChange(editorHistory.current_step - 1);
+                    }
                 }
             }
 
@@ -394,9 +417,9 @@
                         restartLevel();
                     }
 
-                    if (event.code == "KeyZ") {
-                        undoStep();
-                    }
+                }
+                if (event.code == "KeyZ") {
+                    undoStep();
                 }
             });
 
@@ -426,7 +449,8 @@
                             }
                         }
                     }
-                    drawBoard(editorBoard);
+                    editorHistory.add_not_seen(editorBoard.clone());
+                    onEditorChange(editorHistory.current_step);
                 }
             });
 

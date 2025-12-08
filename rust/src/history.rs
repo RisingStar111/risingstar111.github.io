@@ -42,11 +42,16 @@ impl BoardHistory {
             }
         }
         // not seen in the stack
+        self.add_not_seen(moving_board);
+    }
+
+    #[wasm_bindgen]
+    pub fn add_not_seen(&mut self, new_board: Board) {
         self.current_step += 1;
         if self.current_step == self.board_stack.len() {
-            self.board_stack.push(moving_board);
+            self.board_stack.push(new_board);
         } else {
-            self.board_stack[self.current_step] = moving_board;
+            self.board_stack[self.current_step] = new_board;
         }
     }
 

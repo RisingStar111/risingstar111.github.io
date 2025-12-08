@@ -48,6 +48,7 @@ export class BoardHistory {
   free(): void;
   [Symbol.dispose](): void;
   static from_board(board: Board): BoardHistory;
+  add_not_seen(new_board: Board): void;
   get_current_board(): Board;
   get_history_length(): number;
   step(dir: Direction): void;
@@ -139,6 +140,7 @@ export interface InitOutput {
   readonly __wbg_boardhistory_free: (a: number, b: number) => void;
   readonly __wbg_get_boardhistory_current_step: (a: number) => number;
   readonly __wbg_set_boardhistory_current_step: (a: number, b: number) => void;
+  readonly boardhistory_add_not_seen: (a: number, b: number) => void;
   readonly boardhistory_from_board: (a: number) => number;
   readonly boardhistory_get_current_board: (a: number) => number;
   readonly boardhistory_get_history_length: (a: number) => number;
