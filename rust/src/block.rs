@@ -84,6 +84,7 @@ pub enum Side {
     Ice,
     Swap,
     Hole,
+    PushSwap,
 }
 
 #[wasm_bindgen]
@@ -97,6 +98,7 @@ impl Block {
                 "iceSide" => Side::Ice,
                 "swapSide" => Side::Swap,
                 "holeSide" => Side::Hole,
+                "pushSwapSide" => Side::PushSwap,
                 _ => panic!()
             }
         };

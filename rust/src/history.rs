@@ -21,8 +21,9 @@ impl BoardHistory {
         assert!(self.current_step < self.board_stack.len());
         // attempt to get board after moving
         let mut moving_board = self.board_stack[self.current_step].clone();
-        if moving_board.move_player(dir) != StepOutcome::Stepped {
-            // player didn't move // note while ok atm, this may break if player can interact without moving
+        moving_board.move_player(dir);
+        if moving_board == self.board_stack[self.current_step] {
+            // try better but needed something with new weird side
             return
         }
         

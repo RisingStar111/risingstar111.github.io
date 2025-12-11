@@ -68,6 +68,7 @@ export enum Side {
   Ice = 2,
   Swap = 3,
   Hole = 4,
+  PushSwap = 5,
 }
 
 export enum Space {

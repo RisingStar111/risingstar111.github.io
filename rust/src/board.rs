@@ -132,6 +132,7 @@ impl Board {
                 Side::Ice => "iceSide".to_string(),
                 Side::Swap => "swapSide".to_string(),
                 Side::Hole => "holeSide".to_string(),
+                Side::PushSwap => "pushSwapSide".to_string(),
             })
             .collect()
         )
@@ -207,7 +208,10 @@ impl Board {
             // tile exists and is in bounds
             if let Some(block) = into_tile.get_block() {
                 // tile does have a block
-                let side = block.pushed_side(dir);
+                let mut side = block.pushed_side(dir);
+                if side == Side::PushSwap {
+                    side = if index == self.player {Side::Basic} else {Side::Swap};
+                }
 
                 // per side type logic
                 match side {
@@ -265,6 +269,9 @@ impl Board {
                             return StepOutcome::Blocked
                         }
                     }
+                    Side::PushSwap => {
+                        panic!("PushSwap side should already have been processed");
+                    },
                 }
             } else {
                 // tile doesn't have a block
