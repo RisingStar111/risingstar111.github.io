@@ -1,0 +1,51 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0px;
+    background-image: linear-gradient(to bottom left, rgba(128, 0, 128, 0.5), rgba(0, 0, 255, 0.5));
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+.header {
+    background-color: white;
+}
+#canvasContainer {
+    position: relative;
+}
+canvas {
+    border: 1px solid #ccc;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+.selected {
+    border: 2px solid red;
+}
+button {
+    padding: 10px 20px;
+    margin: 5px;
+}
+.small {
+    padding: 5px 5px;
+}
+/* gpt-ed grid selection */
+gridSelect {
+    display: grid;
+    grid-template-columns: repeat(6, 32px);
+    gap: 5px;
+}
+.sprite {
+    border: 1px solid #ccc;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: 32px;
+    height: 32px;
+}
+.sprite.selected {
+    border: 2px solid red;
+}
+.static {
+    background: url('./sprites/modular.png');
+}
+.static[data-id="emptySpace"]  { background-position:  0     -34px; }
+.static[data-id="goalSpace"]   { background-position: -34px  -34px; }
+.static[data-id="playerTile"]  { background-position: -68px  -34px; }
