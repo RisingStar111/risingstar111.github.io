@@ -1,0 +1,235 @@
+<style>
+    #tank {
+        position: absolute;
+        bottom: 0;
+        line-height: 1;
+        width: 100%;
+        font-family: 'Courier New', Courier, monospace;
+    }
+</style>
+<div id="tank">
+
+</div>
+<Script>
+    // setup 'global' stuff
+    // currently assumes the container isn't dynamic
+    const containerDiv = document.currentScript.parentNode;
+    const tankDiv = containerDiv.querySelector("#tank");
+    const widthPixels = parseInt(containerDiv.clientWidth);
+    const heightPixels = parseInt(containerDiv.clientHeight);
+    const fontSize = parseInt(window.getComputedStyle(containerDiv).fontSize);
+    const fontWidth = parseFloat(getCharacterWidth('O', window.getComputedStyle(tankDiv).fontFamily, window.getComputedStyle(tankDiv).fontSize));
+    const lineHeight = parseInt(window.getComputedStyle(tankDiv).lineHeight);
+    const width = Math.floor(widthPixels / fontWidth);
+    const height = Math.floor(heightPixels / lineHeight);
+
+    // fill then map to create new array instances rather than filling with same reference
+    // mostly handled in rebuildFrame but keep it just in case ig?
+    let grid_yx = Array(height).fill('').map(() => Array(width).fill('&nbsp;'));
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+    function getRandomInt(max) {
+        return Math.floor(Math.random() * max);
+    }
+
+    class AsciiSprite {
+        // normal spaces represent 'nothing' aka don't replace with it
+        // for a blank space in the sprite, use '&nbsp;'
+        // use <br> for newline to not deal with escaping
+        // sprite defined with top left as (0, 0)
+        constructor(sprite) {
+            this.sprite_yx = sprite.split("<br>").map(row => row.split(''));
+            this.height = this.sprite_yx.length;
+            this.width = this.sprite_yx[0].length;
+        }
+
+        apply(grid_yx, grid_x, grid_y, gridWidth, gridHeight) {
+            for (let y = 0; y < this.height; y++) {
+                for (let x = 0; x < this.width; x++) {
+                    const overwrite_x = x + grid_x;
+                    const overwrite_y = y + grid_y;
+                    if (overwrite_x < 0 || overwrite_x >= gridWidth || overwrite_y < 0 || overwrite_y >= gridHeight) {
+                        continue;
+                    }
+                    // in bounds
+                    const replacing = this.sprite_yx[y][x];
+                    if (replacing != ' ') {
+                        grid_yx[overwrite_y][overwrite_x] = replacing;
+                    }
+                }
+            }
+        }
+    }
+
+    class Bubble {
+        static bubbleSprite = new AsciiSprite(" _ <br>|_|");
+        static poppedSprite = new AsciiSprite(" \\ / <br>-   -<br> / \\ ");
+        static bubblePool = Array(0);
+        static bubblesCreated = 0;
+        static bubblesPopped = 0;
+
+        constructor(x, listId) {
+            // id to remove itself from the bubbles list
+            this.id = listId;
+            this.setPosition(x, height);
+        }
+
+        static createBubble(x) {
+            let bubble = new Bubble(x, Bubble.bubblesCreated);
+            Bubble.bubblePool.push(bubble);
+            Bubble.bubblesCreated += 1;
+        }
+
+        static render(grid_yx, gridWidth, gridHeight) {
+            Bubble.bubblePool = Bubble.bubblePool.filter(bubble => !bubble.remove);
+            Bubble.bubblePool.forEach(bubble => {
+                if (bubble.popped) {
+                    Bubble.poppedSprite.apply(grid_yx, bubble.x - 1, bubble.y, gridWidth, gridHeight);
+                } else {
+                    Bubble.bubbleSprite.apply(grid_yx, bubble.x, bubble.y, gridWidth, gridHeight);
+                }
+            });
+        }
+
+        pop() {
+            if (!this.popped) {
+                this.popped = true;
+                Bubble.bubblesPopped += 1;
+                window.clearTimeout(this.nextTimeoutHandle);
+                window.setTimeout(() => {this.remove = true; rebuildFrame(); updateTankHTML()}, 300);
+                rebuildFrame();
+                updateTankHTML();
+            }
+        }
+
+        setPosition(x, y) {
+            // need to set accessible vars for eg click handling
+            this.x = x;
+            this.y = y;
+            // move again in a bit while 'underwater'
+            if (this.y > -2) {
+                this.nextTimeoutHandle = window.setTimeout(() => this.setPosition(this.x, this.y - 1), 1000);
+            } else {
+                this.remove = true;
+            }
+            // while performance isn't an issue, each bubble move redraws the grid
+            rebuildFrame();
+            updateTankHTML();
+        }
+    }
+
+    // todo refactor and add functionality
+    class Cat {
+        static earsSprite = new AsciiSprite("/M\\ /M\\");
+        static faceSprite = new AsciiSprite(" # _ # ");
+        static pawsSprite = new AsciiSprite(" nn nn ");
+        static faceShySprite = new AsciiSprite(" # _ # ");
+        static shy = false;
+
+        static {
+            Cat.faceShySprite.sprite_yx[0][1] = '<u style="text-decoration-color: lightpink">#</u>'
+            Cat.faceShySprite.sprite_yx[0][5] = '<u style="text-decoration-color: lightpink">#</u>'
+        }
+
+        static render(grid_yx, gridWidth, gridHeight) {
+            if (Bubble.bubblesPopped >= 15) {
+                Cat.earsSprite.apply(grid_yx, 1, gridHeight - 3, gridWidth, gridHeight);
+                if (Cat.shy) {
+                    Cat.faceShySprite.apply(grid_yx, 1, gridHeight - 2, gridWidth, gridHeight);
+                } else {
+                    Cat.faceSprite.apply(grid_yx, 1, gridHeight - 2, gridWidth, gridHeight);
+                }
+                Cat.pawsSprite.apply(grid_yx, 1, gridHeight - 1, gridWidth, gridHeight);
+            } else if (Bubble.bubblesPopped >= 10) {
+                Cat.pawsSprite.apply(grid_yx, 1, gridHeight - 1, gridWidth, gridHeight);
+                Cat.earsSprite.apply(grid_yx, 1, gridHeight - 2, gridWidth, gridHeight);
+            } else if (Bubble.bubblesPopped >= 5) {
+                Cat.pawsSprite.apply(grid_yx, 1, gridHeight - 1, gridWidth, gridHeight);
+            }
+        }
+    }
+
+    function rebuildFrame() {
+        // start from scratch - moving things mean not doing this will be hard but will try if possible later
+        // clear
+        grid_yx = Array(height).fill('').map(() => Array(width).fill('&nbsp;'));
+        // meow
+        Cat.render(grid_yx, width, height);
+        // bubbles
+        Bubble.render(grid_yx, width, height);
+    }
+
+    function updateTankHTML() {
+        tankDiv.innerHTML = grid_yx.map(row => {
+            return row.join('');
+        }).join('<br>');
+    }
+
+    // https://stackoverflow.com/questions/68658100/precise-width-of-a-monospace-character
+    function getCharacterWidth(char, fontFamily, fontSize) {
+        let span = document.createElement("span");
+        span.style.fontFamily = fontFamily;
+        span.style.fontSize = fontSize;
+        span.style.position = "absolute";
+        span.style.visibility = "hidden";
+        span.style.width = "auto";
+        span.style.whiteSpace = "nowrap";
+        span.style.padding = "0";
+        span.style.margin = "0";
+        span.style.letterSpacing = "0px";
+        span.style.wordSpacing = "0px";
+        span.innerText = char;
+        document.body.appendChild(span);
+        
+        let width = span.getBoundingClientRect().width;
+        span.remove();
+        
+        return width;
+    }
+
+    // WARNING: recursively calls itself on a timer
+    function spawnBubble() {
+        // time in seconds
+        const minSpawnTime = 0.5;
+        const maxSpawnTime = 5;
+        // allow bubbles to spawn on edge of tank
+        Bubble.createBubble(getRandomInt(width+4)-1);
+        window.setTimeout(spawnBubble, 1000 * (minSpawnTime + Math.random() * (maxSpawnTime - minSpawnTime)));
+    }
+
+    tankDiv.addEventListener('click', (e) => {
+        let pixelX = e.offsetX;
+        let pixelY = e.offsetY;
+        let posX = Math.floor((pixelX / widthPixels) * width);
+        let posY = Math.floor((pixelY / heightPixels) * height);
+        if (Math.abs(1 + 3 - posX) <= 2 && Math.abs(height - 3 + 1 - posY) <= 1) {
+            if (Bubble.bubblesPopped >= 15) {
+                Cat.shy = true;
+            }
+        }
+        Bubble.bubblePool.forEach(bubble => {
+            if (Math.abs(bubble.x + 1 - posX) <= 1 && Math.abs(bubble.y + 1 - posY) <= 1) {
+                bubble.pop();
+            }
+        });
+    });
+
+    updateTankHTML();
+
+    spawnBubble();
+
+</Script>
+
+<!-- 
+ _   
+|_|  
+ 
+  \ /
+ -   -
+  / \
+
+
+  /M\ /M\
+   # _ #
+   nn nn  
+-->
