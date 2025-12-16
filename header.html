@@ -1,3 +1,66 @@
-<div class="header">
-    <button>hello</button>
+<div class="header" style="border-bottom: 2px solid black">
+    <style>
+        /* https://www.w3schools.com/css/tryit.asp?filename=trycss_dropdown_navbar */
+        li {
+            float: left;
+        }
+
+        li a, .dropbtn {
+            display: inline-block;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+
+        li a:hover, .dropdown:hover .dropbtn {
+            background-color: red;
+        }
+
+        li.dropdown {
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+        }
+
+        .dropdown-content a:hover {background-color: #f1f1f1;}
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+    </style>
+    <nav style="display: inline-block">
+        <ul style="list-style-type: none; margin: 0; padding: 0;">
+            <li>
+                <a href="/homepage.html">Home</a>
+            </li>
+            <li class="dropdown">
+                <a class="dropbtn" href="/pages/pathology/pathology.html">Pathology</a>
+                <div class="dropdown-content">
+                    <a href="/pages/pathology/pathology.html">Path</a>
+                    <a href="/pages/pathology/pathology2.html">sand</a>
+                </div>
+            </li>
+            <li class="dropdown">
+                <span class="dropbtn">Other</span>
+                <div class="dropdown-content">
+                    <a href="/pages/bombe/bombe.html">bombe</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
 </div>
