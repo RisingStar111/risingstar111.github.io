@@ -299,6 +299,8 @@
                     canvas.setAttribute("width", ratio * baseSide);
                     canvas.setAttribute("height",  baseSide);
                 }
+                // reset image smoothing to false because changing dimensions resets entire canvas
+                ctx.imageSmoothingEnabled=false;
 
                 const width = board.get_width();
                 const height = board.get_height();
