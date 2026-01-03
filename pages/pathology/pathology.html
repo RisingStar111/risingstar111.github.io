@@ -4,28 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website Template</title>
-    <style>
-        /* Add any CSS styles here */
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 20px;
-        }
-        #canvasContainer {
-            position: relative;
-        }
-        canvas {
-            border: 1px solid #ccc;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-        }
-    </style>
+    <link rel="stylesheet" href="/base.css">
 </head>
-<body>
+<body style="display: flex; flex-direction: column">
+    <!--#include file="/header.html"-->
     <h1>5x5 levels</h1>
     <div id="canvasContainer">
         <canvas id="canvas" width="360" height="360"></canvas>
@@ -47,6 +29,15 @@
     <div id="bonusOptions">
         <label><input type="checkbox" id="orientationToggle" checked>Randomise orientation</label>
         <label><input type="checkbox" id="automaticRandom">New level when optimal</label>
+    </div>
+    <br>
+    <div style="display: flex; justify-content: center;">
+        <div style="min-width: 50%; max-width: 300px; text-align: left;">
+            <p>We define a solution to be unique if it is not a subset of another solution (independant on what levels allow that solution), up to rotations and reflections. For 5x5 holeless, there are 56599 unique solutions, with the longest being 69 steps long. The game above has 56599 levels - one level per unique solution (but not guaranteeing that each level has only one solution).</p>
+            <p>Levels were constructed via exhaustive backwards breadth-first search while ensuring the construction path is an optimal solution. Solutions weren't tracked during generation as the original goal was only to find and verify the longest level. Initially, a tree of all optimal paths through all generated levels was constructed, before pairwise checking for subsets and storing the maximal solutions (and a corresponding level). A particular implementation detail is that during generation, levels were compared (see below) against only levels with fewer steps taken - comparing against same-step levels in addition results in the tree of paths being incomplete, unless tracked during generation.</p>
+            <p>To reduce the state space of the search, levels were discarded if they had been 'seen before', thus providing no new information about the space; the goal of the search is to find the longest optimal solution, which is certainly obtained if all possible routes are explored where the new level doesn't have a shorter solution (e.g. when traversing backwards, one may loop directly back to the exit, resulting in a trivially solution). A simple verification step is to use a standard foward running solver and check that the fastest solution is what it should be, but this is extremely costly. Instead, each new level is checked for an existing 'subset'. A subset of a level X is defined to be any level Y such that all possible backwards steps (recursively) from Y result in levels which have an optimal solution that is also a solution on the levels created by the same steps from X, and a level cannot be a subset if there are valid backward steps that don't exist on both X and Y (two levels may have the same solutions currently, but a different arrangement of blocks that allow diverging states later). A subset, if seen, also has an optimal solution that is strictly shorter, as the search is step-wise breadth-first.</p>
+            <p>For a simplified version of Pathology where all blocks can be pushed in any direction, (only most?) subsets are given by a direct subset on the 'playable space' (non-wall tiles) of each level - if the playable space of level Y is contained in the playable space of level X, and all blocks, goals and the player are in the same place, then X is a subset of Y, and Y is discarded. When restricted blocks are introduced, the above still applies, but each block checks for a subset of pushable sides rather than exact equality (block A is a subset of block B if B has at least the same sides pushable as A).</p>
+        </div>
     </div>
 
     <script>

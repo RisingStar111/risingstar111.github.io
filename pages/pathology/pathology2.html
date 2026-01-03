@@ -4,30 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website Template</title>
+    <link rel="stylesheet" href="/base.css">
     <style>
-        /* Add any CSS styles here */
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 20px;
-        }
-        #canvasContainer {
-            position: relative;
-        }
         canvas {
-            border: 1px solid #ccc;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-        }
-        .selected {
-            border: 2px solid red;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-        }
-        .small {
-            padding: 5px 5px;
+            background-color: rgb(9, 189, 9);
         }
         /* gpt-ed grid selection */
         gridSelect {
@@ -42,29 +22,108 @@
             width: 32px;
             height: 32px;
         }
-        .sprite.selected {
-            border: 2px solid red;
-        }
         .static {
             background: url('./sprites/modular.png');
         }
         .static[data-id="emptySpace"]  { background-position:  0     -34px; }
         .static[data-id="goalSpace"]   { background-position: -34px  -34px; }
         .static[data-id="playerTile"]  { background-position: -68px  -34px; }
+        
+        .selected {
+            border: 2px solid red;
+        }
+        
+        #canvasContainer {
+            display: grid;
+            grid-template-columns: 50px auto 50px;
+            grid-template-rows: 50px auto 50px;
+            align-items: center;
+            justify-items: center;
+        }
+        .resizeButton {
+            font-size: larger;
+            padding: 0 0;
+            width: 30px;
+            height: 30px;
+        }
     </style>
 </head>
 <body>
-    <h1>5x5 levels</h1>
-    <div id="canvasContainer">
-        <canvas id="canvas" width="320" height="320"></canvas>
-        <br>
-        <label>Make a level with modular blocks</label>
+    <!--#include file="/header.html"-->
+
+    <template id="infopopup-template">
+        <style>
+            #container {
+                position: relative;
+                border: 2px solid black;
+            }
+            #details {
+                padding: 5px;
+                visibility: hidden;
+                position: absolute;
+                background-color: white;
+                border: 2px solid black;
+                z-index: 1;
+                text-wrap-mode: nowrap; /* Not ideal but unsure what else exists */
+            }
+            #preview:hover {
+                transition: 300ms linear;
+                background-color: white;
+            }
+            #preview:hover + #details {
+                transition-delay: 300ms;
+                visibility: visible;
+            }
+        </style>
+        <div id="container">
+            <div id="preview">
+                <slot name="text" id="preview">?</slot>
+            </div>
+            <div id="details">
+                <slot>Information on Hover</slot>
+            </div>
+        </div>
+    </template>
+
+    <h1>Extended Pathology Level Editor</h1>
+    <div id="canvasContainerContainer" style="place-items: center;">
+        <div id="canvasContainer">
+            <br>
+            <div>
+                <button class="resizeButton" id="addTop">+</button>
+                <button class="resizeButton" id="subTop">-</button>
+            </div>
+            <br>
+            <div>
+                <button class="resizeButton" id="addLeft">+</button>
+                <button class="resizeButton" id="subLeft">-</button>
+            </div>
+            <canvas id="canvas" width="320" height="320"></canvas>
+            <div>
+                <button class="resizeButton" id="addRight">+</button>
+                <button class="resizeButton" id="subRight">-</button>
+            </div>
+            <br>
+            <div>
+                <button class="resizeButton" id="addBottom">+</button>
+                <button class="resizeButton" id="subBottom">-</button>
+            </div>
+        </div>
     </div>
+    Make a level with modular blocks
     <div id="buttonControls">
         <div id="editorControls">
             <button id="playButton">Play</button>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr">
-                <div id="sideSelectorContainer">
+                <div id="sideSelectorContainer" style="display: flex; flex-direction: column; align-items: end;" width="64">
+                    <gridselect style="float: right">
+                        <info-popup>Wall<br>Cannot be pushed</info-popup>
+                        <info-popup>Basic<br>Can be pushed</info-popup>
+                        <info-popup>Ice<br>Slides when pushed</info-popup>
+                        <info-popup>Swap<br>Swaps with incoming entities</info-popup>
+                        <info-popup>Hole<br>Deletes itself and incoming entities</info-popup>
+                        <info-popup>PushSwap<br>Basic for the player<br>Swap for blocks</info-popup>
+                    </gridselect>
                     <!-- Initialised by 'initisaliseSideSelector' -->
                 </div>
                 <div>
@@ -73,9 +132,9 @@
                     <input type="checkbox" id="clearPlacement">
                     <label for="clearPlacement">Remove blocks</label>
                     <br>
-                    <input type="number" id="width" min="1" value="5">
+                    <input type="number" id="width" min="1" max="99" value="5">
                     <label for="width">Width</label>
-                    <input type="number" id="height" min="1" value="5">
+                    <input type="number" id="height" min="1" max="99" value="5" style="margin-left: 10px">
                     <label for="height">Height</label>
                     <br>
                     <input type="range" min="0" max="0" id="editorSlider">
@@ -84,23 +143,15 @@
                     <br>
                     <button id="dataButton">Level data</button>
                     <br>
-                    <button class="small" id="addTop">+</button>
-                    Top
-                    <button class="small" id="subTop">-</button>
-                    <br>
-                    <button class="small" id="addLeft">+</button>
-                    Left
-                    <button class="small" id="subLeft">-</button>
-                    <button class="small" id="addRight">+</button>
-                    Right
-                    <button class="small" id="subRight">-</button>
-                    <br>
-                    <button class="small" id="addBottom">+</button>
-                    Bottom
-                    <button class="small" id="subBottom">-</button>
+                    <input type="checkbox" id="fullWalls" checked>
+                    <label for="fullWalls">Fill walls</label>
                 </div>
-                <div>
-                    <p style="float: left">None Goal Player</p>
+                <div style="display: flex; flex-direction: column; align-items: start;">
+                    <gridselect style="float: left">
+                        <info-popup>None<br>Empty space</info-popup>
+                        <info-popup>Goal<br>Get the player here to win<br>[Winning not implemented]</info-popup>
+                        <info-popup>Player<br>Can only have one<br>Cannot overlap a block</info-popup>
+                    </gridselect>
                     <gridSelect id="spaceSelection" style="float: left">
                         <div class="sprite static" data-id="emptySpace"></div>
                         <div class="sprite static" data-id="goalSpace"></div>
@@ -125,9 +176,12 @@
         </div>
     </div>
     <dialog id="levelDataDialog">
+        Contains the current level data.<br>
+        Closing this loads the contained data.<br>
+        You can also copy images of the level directly and paste them here.<br>
         <textarea id="levelDataText"></textarea>
         <form method="dialog">
-            <button id="loadFromDataButton">Close</button>
+            <button id="loadFromDataButton">Load</button>
         </form>
     </dialog>
 
@@ -144,11 +198,12 @@
             let playHistory = null;
             // top, right, bottom, left
             // definitely sacrifices some clarity but i like list manipulation what can i say
-            let selectedSides = ["wallSide", "wallSide", "wallSide", "wallSide"];
+            let selectedSides = ["basicSide", "basicSide", "basicSide", "basicSide"];
             let space = "emptySpace";
             let placeLayer = "block";
             let clearPlacement = () => document.getElementById("clearPlacement").checked;
             let playing = false;
+            let fullWall = () => document.getElementById("fullWalls").checked;
 
             const previewCanvas = document.getElementById("blockPreview");
             const previewCtx = previewCanvas.getContext("2d");
@@ -171,6 +226,7 @@
             document.getElementById("loadFromDataButton").onclick = loadFromData;
             document.getElementById("stepSlider").oninput = onSliderChange;
             document.getElementById("editorSlider").oninput = onSliderChange;
+            document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard(playing ? playBoard : editorBoard)};
             document.getElementById("addTop").onclick = () => add_side("top");
             document.getElementById("subTop").onclick = () => remove_side("top");
             document.getElementById("addLeft").onclick = () => add_side("left");
@@ -216,6 +272,8 @@
                 document.getElementById("editorSlider").value = new_step;
                 editorHistory.current_step = new_step;
                 editorBoard = editorHistory.get_current_board();
+                document.getElementById("width").value = editorHistory.get_current_board().get_width();
+                document.getElementById("height").value = editorHistory.get_current_board().get_height();
                 drawBoard(editorHistory.get_current_board());
             }
 
@@ -230,7 +288,8 @@
             function loadFromData() {
                 const levelText = document.getElementById("levelDataText").value;
                 editorBoard = Board.from_serialized(levelText);
-                drawBoard(editorBoard);
+                editorHistory.add_not_seen(editorBoard.clone());
+                onEditorChange(editorHistory.current_step);
             }
 
             function resizeLevel() {
@@ -238,7 +297,8 @@
                 const newHeight = parseInt(document.getElementById("height").value);
 
                 editorBoard = newBoard(newWidth, newHeight);
-                drawBoard(editorBoard);
+                editorHistory.add_not_seen(editorBoard.clone());
+                onEditorChange(editorHistory.current_step);
             }
             function restartLevel() {
                 playHistory.current_step = 0;
@@ -253,6 +313,9 @@
                 }
                 document.getElementById("playControls").style.display = "block";
                 document.getElementById("editorControls").style.display = "none";
+                document.querySelectorAll(".resizeButton").forEach(element => {
+                    element.style.display = "none";
+                });
 
                 playHistory = BoardHistory.from_board(editorBoard.clone());
                 onStepChange(0);
@@ -262,6 +325,9 @@
             function editLevel() {
                 document.getElementById("playControls").style.display = "none";
                 document.getElementById("editorControls").style.display = "block";
+                document.querySelectorAll(".resizeButton").forEach(element => {
+                    element.style.display = "inline-block";
+                });
 
                 drawBoard(editorBoard);
                 playing = false;
@@ -283,6 +349,12 @@
             }
 
             function drawBlockPreview() {
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height)
+                if (fullWall() && arrayEqual(selectedSides, ["wallSide", "wallSide", "wallSide", "wallSide"])) {
+                    // draw special fullblock wall
+                    drawSpace("wallTile", [0, 0], 1, 1, previewCtx, previewCanvas);
+                    return;
+                }
                 drawBlock(selectedSides, [0, 0], 1, 1, previewCtx, previewCanvas);
             }
             function drawBoard(board) {
@@ -298,6 +370,8 @@
                     canvas.setAttribute("width", ratio * baseSide);
                     canvas.setAttribute("height",  baseSide);
                 }
+                // reset image smoothing to false because changing dimensions resets entire canvas
+                ctx.imageSmoothingEnabled=false;
 
                 const width = board.get_width();
                 const height = board.get_height();
@@ -308,6 +382,12 @@
                         const space = board.get_space(index);
                         drawSpace(space, [x, y], width, height, ctx, canvas);
                         if (block != null) {
+                            // todo don't reuse
+                            if (fullWall() && arrayEqual(block, ["wallSide", "wallSide", "wallSide", "wallSide"])) {
+                                // draw special fullblock wall
+                                drawSpace("wallTile", [x, y], width, height, ctx, canvas);
+                                continue;
+                            }
                             drawBlock(block, [x, y], width, height, ctx, canvas);
                         }
                     }
@@ -319,13 +399,13 @@
             // Initialise side selector
             {
                 // insert side names
-                let innerHtml = "<p style=\"float: right\">Wall Basic Ice Swap Hole Puap</p>";
+                let innerHtml = document.getElementById("sideSelectorContainer").innerHTML;
                 // insert grid elements per side
                 const sides = ["top", "left", "right", "bottom"];
                 innerHtml += sides.map((side) => {
                         return `<gridSelect id="${side}SideSelection" style="float: right">
-                            <canvas width="32" height="32" class="sprite selected" data-id="wallSide"></canvas>
-                            <canvas width="32" height="32" class="sprite" data-id="basicSide"></canvas>
+                            <canvas width="32" height="32" class="sprite" data-id="wallSide"></canvas>
+                            <canvas width="32" height="32" class="sprite selected" data-id="basicSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="iceSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="swapSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="holeSide"></canvas>
@@ -465,7 +545,7 @@
 
         const modularImg = new Image();
         modularImg.src = "sprites/modular.png";
-
+        
         const sideOffsets = {
             "wallSide" : 68,
             "basicSide" : 0,
@@ -478,6 +558,7 @@
             "emptySpace" : 0,
             "goalSpace" : 34,
             "playerTile" : 68,
+            "wallTile" : 102,
             }
         function drawBlock(blockSides, gridPos, gridWidth, gridHeight, ctx, canvas) {
             for (let i = 0; i < 4; i++) {
@@ -486,11 +567,6 @@
         }
         function drawSpace(space, gridPos, gridWidth, gridHeight, ctx, canvas) {
             drawTile(spaceOffsets[space], 34, gridPos, 0, gridWidth, gridHeight, ctx, canvas)
-        }
-
-        function testlog(gridWidth, canvas) {
-            const canvasX = gridPos[0] * (canvas.width / gridWidth);
-            console.log(canvasX);
         }
 
         function drawTile(spriteXOffset, spriteYOffset, gridPos, angle, gridWidth, gridHeight, ctx, canvas) {
@@ -510,12 +586,35 @@
             ctx.translate(-canvasX - tileWidth/2, -canvasY - tileHeight/2);
         }
 
+        // doesn't work on nested items
+        // length must be the same - this includes undefined items and having items assigned to 'different indexes' since js arrays are fake
+        function arrayEqual(arrayLeft, arrayRight) {
+            if (arrayLeft.length != arrayRight.length) { return false }
+            for (let i = 0; i < arrayLeft.length; i++) {
+                if (arrayLeft[i] != arrayRight[i]) { return false }
+            }
+            return true
+        }
+
         // make sure the initial draw events work
         if (modularImg.complete) {
             run();
         } else {
             modularImg.onload = run;
         }
+
+        customElements.define(
+            "info-popup",
+            class extends HTMLElement {
+                constructor() {
+                super();
+                let template = document.getElementById("infopopup-template");
+                let templateContent = template.content;
+
+                const shadowRoot = this.attachShadow({ mode: "open" });
+                shadowRoot.appendChild(document.importNode(templateContent, true));
+                }
+            });
     </script>
 </body>
 </html>

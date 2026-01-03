@@ -1,0 +1,69 @@
+<div class="header" style="display: flex; border-bottom: 2px solid black">
+    <style>
+        /* https://www.w3schools.com/css/tryit.asp?filename=trycss_dropdown_navbar */
+        li {
+            float: left;
+        }
+
+        li a, .dropbtn {
+            display: block;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+
+        li a:hover, .dropdown:hover .dropbtn {
+            background-color: #CCCCCC;
+        }
+
+        li.dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 100%;
+            text-wrap: nowrap;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+        }
+
+        .dropdown-content a:hover {background-color: #EEEEEE;}
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+    </style>
+    <nav style="display: block; align-items: center">
+        <ul style="list-style-type: none; margin: 0; padding: 0;">
+            <li>
+                <a href="/index.html">Home</a>
+            </li>
+            <!-- work out accessibility later if bothered -->
+            <li class="dropdown">
+                <span class="dropbtn">Pathology</span>
+                <div class="dropdown-content">
+                    <a href="/pages/pathology/pathologya.html">About</a>
+                    <a href="/pages/pathology/pathology.html">Longest Levels</a>
+                    <a href="/pages/pathology/pathology2.html">Sandbox</a>
+                </div>
+            </li>
+            <li class="dropdown">
+                <span class="dropbtn">Other</span>
+                <div class="dropdown-content">
+                    <a href="/pages/bombe/bombe.html">Bombe Editor</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+</div>
