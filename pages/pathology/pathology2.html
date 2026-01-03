@@ -310,6 +310,9 @@
                 }
                 document.getElementById("playControls").style.display = "block";
                 document.getElementById("editorControls").style.display = "none";
+                document.querySelectorAll(".resizeButton").forEach(element => {
+                    element.style.display = "none";
+                });
 
                 playHistory = BoardHistory.from_board(editorBoard.clone());
                 onStepChange(0);
@@ -319,6 +322,9 @@
             function editLevel() {
                 document.getElementById("playControls").style.display = "none";
                 document.getElementById("editorControls").style.display = "block";
+                document.querySelectorAll(".resizeButton").forEach(element => {
+                    element.style.display = "inline-block";
+                });
 
                 drawBoard(editorBoard);
                 playing = false;
