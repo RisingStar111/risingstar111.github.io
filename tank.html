@@ -1,10 +1,11 @@
 <style>
     #tank {
-        position: absolute;
-        bottom: 0;
         line-height: 1;
         width: 100%;
         font-family: 'Courier New', Courier, monospace;
+        border-top: 2px solid black;
+        border-bottom: 2px solid black;
+        background-image: linear-gradient(to bottom, rgba(0, 0, 255, 0), rgba(0, 0, 255, 0.5));
     }
 </style>
 <div id="tank">
@@ -141,6 +142,7 @@
                 }
                 Cat.pawsSprite.apply(grid_yx, 1, gridHeight - 1, gridWidth, gridHeight);
             } else if (Bubble.bubblesPopped >= 10) {
+                Cat.faceSprite.apply(grid_yx, 1, gridHeight - 1, gridWidth, gridHeight);
                 Cat.pawsSprite.apply(grid_yx, 1, gridHeight - 1, gridWidth, gridHeight);
                 Cat.earsSprite.apply(grid_yx, 1, gridHeight - 2, gridWidth, gridHeight);
             } else if (Bubble.bubblesPopped >= 5) {
@@ -203,8 +205,11 @@
         let posX = Math.floor((pixelX / widthPixels) * width);
         let posY = Math.floor((pixelY / heightPixels) * height);
         if (Math.abs(1 + 3 - posX) <= 2 && Math.abs(height - 3 + 1 - posY) <= 1) {
-            if (Bubble.bubblesPopped >= 15) {
+            if (Bubble.bubblesPopped >= 15 && !Cat.shy) {
                 Cat.shy = true;
+                window.setTimeout(() => Cat.shy = false, 3000);
+                rebuildFrame();
+                updateTankHTML();
             }
         }
         Bubble.bubblePool.forEach(bubble => {
@@ -219,17 +224,3 @@
     spawnBubble();
 
 </Script>
-
-<!-- 
- _   
-|_|  
- 
-  \ /
- -   -
-  / \
-
-
-  /M\ /M\
-   # _ #
-   nn nn  
--->

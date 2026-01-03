@@ -98,8 +98,8 @@ impl Board {
     #[wasm_bindgen]
     pub fn remove_side_bottom(&mut self) {
         if self.height <= 1 {return}
-        self.grid.truncate(self.width*self.height);
         self.height -= 1;
+        self.grid.truncate(self.width*self.height);
     }
     #[wasm_bindgen]
     pub fn remove_side_left(&mut self) {
