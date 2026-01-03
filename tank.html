@@ -16,13 +16,23 @@
     // currently assumes the container isn't dynamic
     const containerDiv = document.currentScript.parentNode;
     const tankDiv = containerDiv.querySelector("#tank");
-    const widthPixels = parseInt(containerDiv.clientWidth);
-    const heightPixels = parseInt(containerDiv.clientHeight);
     const fontSize = parseInt(window.getComputedStyle(containerDiv).fontSize);
     const fontWidth = parseFloat(getCharacterWidth('O', window.getComputedStyle(tankDiv).fontFamily, window.getComputedStyle(tankDiv).fontSize));
     const lineHeight = parseInt(window.getComputedStyle(tankDiv).lineHeight);
-    const width = Math.floor(widthPixels / fontWidth);
-    const height = Math.floor(heightPixels / lineHeight);
+    // these are much more likely to change
+    // only checked when it would otherwise update
+    let widthPixels;
+    let heightPixels;
+    let width;
+    let Height;
+    recalculateSize();
+
+    function recalculateSize() {
+        widthPixels = parseInt(containerDiv.clientWidth);
+        heightPixels = parseInt(containerDiv.clientHeight);
+        width = Math.floor(widthPixels / fontWidth);
+        height = Math.floor(heightPixels / lineHeight);
+    }
 
     // fill then map to create new array instances rather than filling with same reference
     // mostly handled in rebuildFrame but keep it just in case ig?
@@ -162,6 +172,8 @@
     }
 
     function updateTankHTML() {
+        // performance really shouldn't be a concern for this
+        recalculateSize();
         tankDiv.innerHTML = grid_yx.map(row => {
             return row.join('');
         }).join('<br>');
