@@ -30,7 +30,7 @@
     </style>
 </head>
 <body>
-    <!--#include file="/header.html"-->
+    <div id="header"></div>
     <div id="canvasContainer">
         <h1>Bombe Level Maker</h1>
         <canvas id="canvas" width="500" height="500"></canvas>
@@ -387,4 +387,13 @@
         }
     </script>
 </body>
+
+<script>
+    // ChatGPT
+    fetch('/header.html')
+    .then(res => res.text())
+    .then(html => {
+        document.getElementById('header').innerHTML = html;
+    });
+</script>
 </html>

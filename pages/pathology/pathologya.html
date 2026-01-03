@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/base.css">
 </head>
 <body style="display: flex; flex-direction: column">
-    <!--#include file="/header.html"-->
+    <div id="header"></div>
     <h1>Funny block game</h1>
     <div style="display: flex; justify-content: center;">
         <div style="min-width: 50%; max-width: 300px; text-align: left;">
@@ -19,4 +19,13 @@
         </div>
     </div>
 </body>
+
+<script>
+    // ChatGPT
+    fetch('/header.html')
+    .then(res => res.text())
+    .then(html => {
+        document.getElementById('header').innerHTML = html;
+    });
+</script>
 </html>

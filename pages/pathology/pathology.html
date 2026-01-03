@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/base.css">
 </head>
 <body style="display: flex; flex-direction: column">
-    <!--#include file="/header.html"-->
+    <div id="header"></div>
     <h1>5x5 levels</h1>
     <div id="canvasContainer">
         <canvas id="canvas" width="360" height="360"></canvas>
@@ -288,4 +288,12 @@
         }
     </script>
 </body>
+<script>
+    // ChatGPT
+    fetch('/header.html')
+    .then(res => res.text())
+    .then(html => {
+        document.getElementById('header').innerHTML = html;
+    });
+</script>
 </html>

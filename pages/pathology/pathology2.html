@@ -49,7 +49,7 @@
     </style>
 </head>
 <body>
-    <!--#include file="/header.html"-->
+    <div id="header"></div>
 
     <template id="infopopup-template">
         <style>
@@ -617,4 +617,13 @@
             });
     </script>
 </body>
+
+<script>
+    // ChatGPT
+    fetch('/header.html')
+    .then(res => res.text())
+    .then(html => {
+        document.getElementById('header').innerHTML = html;
+    });
+</script>
 </html>
