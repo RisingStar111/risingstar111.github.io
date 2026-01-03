@@ -99,6 +99,8 @@
                     <button class="small" id="addBottom">+</button>
                     Bottom
                     <button class="small" id="subBottom">-</button>
+                    <input type="checkbox" id="fullWalls">
+                    <label for="fullWalls">Fill walls</label>
                 </div>
                 <div>
                     <p style="float: left">None Goal Player</p>
@@ -145,11 +147,12 @@
             let playHistory = null;
             // top, right, bottom, left
             // definitely sacrifices some clarity but i like list manipulation what can i say
-            let selectedSides = ["wallSide", "wallSide", "wallSide", "wallSide"];
+            let selectedSides = ["basicSide", "basicSide", "basicSide", "basicSide"];
             let space = "emptySpace";
             let placeLayer = "block";
             let clearPlacement = () => document.getElementById("clearPlacement").checked;
             let playing = false;
+            let fullWall = () => document.getElementById("fullWalls").checked;
 
             const previewCanvas = document.getElementById("blockPreview");
             const previewCtx = previewCanvas.getContext("2d");
@@ -172,6 +175,7 @@
             document.getElementById("loadFromDataButton").onclick = loadFromData;
             document.getElementById("stepSlider").oninput = onSliderChange;
             document.getElementById("editorSlider").oninput = onSliderChange;
+            document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard(playing ? playBoard : editorBoard)};
             document.getElementById("addTop").onclick = () => add_side("top");
             document.getElementById("subTop").onclick = () => remove_side("top");
             document.getElementById("addLeft").onclick = () => add_side("left");
@@ -284,6 +288,12 @@
             }
 
             function drawBlockPreview() {
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height)
+                if (fullWall() && arrayEqual(selectedSides, ["wallSide", "wallSide", "wallSide", "wallSide"])) {
+                    // draw special fullblock wall
+                    drawSpace("wallTile", [0, 0], 1, 1, previewCtx, previewCanvas);
+                    return;
+                }
                 drawBlock(selectedSides, [0, 0], 1, 1, previewCtx, previewCanvas);
             }
             function drawBoard(board) {
@@ -311,6 +321,12 @@
                         const space = board.get_space(index);
                         drawSpace(space, [x, y], width, height, ctx, canvas);
                         if (block != null) {
+                            // todo don't reuse
+                            if (fullWall() && arrayEqual(block, ["wallSide", "wallSide", "wallSide", "wallSide"])) {
+                                // draw special fullblock wall
+                                drawSpace("wallTile", [x, y], width, height, ctx, canvas);
+                                continue;
+                            }
                             drawBlock(block, [x, y], width, height, ctx, canvas);
                         }
                     }
@@ -327,8 +343,8 @@
                 const sides = ["top", "left", "right", "bottom"];
                 innerHtml += sides.map((side) => {
                         return `<gridSelect id="${side}SideSelection" style="float: right">
-                            <canvas width="32" height="32" class="sprite selected" data-id="wallSide"></canvas>
-                            <canvas width="32" height="32" class="sprite" data-id="basicSide"></canvas>
+                            <canvas width="32" height="32" class="sprite" data-id="wallSide"></canvas>
+                            <canvas width="32" height="32" class="sprite selected" data-id="basicSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="iceSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="swapSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="holeSide"></canvas>
@@ -481,6 +497,7 @@
             "emptySpace" : 0,
             "goalSpace" : 34,
             "playerTile" : 68,
+            "wallTile" : 102,
             }
         function drawBlock(blockSides, gridPos, gridWidth, gridHeight, ctx, canvas) {
             for (let i = 0; i < 4; i++) {
@@ -511,6 +528,16 @@
             ctx.translate(tileWidth/2, tileHeight/2);
             ctx.rotate(-angle);
             ctx.translate(-canvasX - tileWidth/2, -canvasY - tileHeight/2);
+        }
+
+        // doesn't work on nested items
+        // length must be the same - this includes undefined items and having items assigned to 'different indexes' since js arrays are fake
+        function arrayEqual(arrayLeft, arrayRight) {
+            if (arrayLeft.length != arrayRight.length) { return false }
+            for (let i = 0; i < arrayLeft.length; i++) {
+                if (arrayLeft[i] != arrayRight[i]) { return false }
+            }
+            return true
         }
 
         // make sure the initial draw events work
