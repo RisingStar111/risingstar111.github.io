@@ -176,12 +176,13 @@
         </div>
     </div>
     <dialog id="levelDataDialog">
-        Contains the current level data.<br>
-        Closing this loads the contained data.<br>
-        You can also copy images of the level directly and paste them here.<br>
+        Contains the current level data in a JSON format.<br>
+        You can also copy images of the level directly and load them here.<br>
         <textarea id="levelDataText"></textarea>
         <form method="dialog">
-            <button id="loadFromDataButton">Load</button>
+            <button id="loadFromDataButton">Load JSON</button>
+            <button id="loadFromImageButton">Load Image</button>
+            <button id="cancelButton">Cancel</button>
         </form>
     </dialog>
 
@@ -224,6 +225,7 @@
             document.getElementById("resizeButton").onclick = resizeLevel;
             document.getElementById("dataButton").onclick = displayLevelData;
             document.getElementById("loadFromDataButton").onclick = loadFromData;
+            document.getElementById("loadFromImageButton").onclick = loadFromImage;
             document.getElementById("stepSlider").oninput = onSliderChange;
             document.getElementById("editorSlider").oninput = onSliderChange;
             document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard(playing ? playBoard : editorBoard)};
@@ -275,6 +277,7 @@
                 document.getElementById("width").value = editorHistory.get_current_board().get_width();
                 document.getElementById("height").value = editorHistory.get_current_board().get_height();
                 drawBoard(editorHistory.get_current_board());
+                drawData(editorBoard.serialize_bytes());
             }
 
             function displayLevelData() {
@@ -290,6 +293,25 @@
                 editorBoard = Board.from_serialized(levelText);
                 editorHistory.add_not_seen(editorBoard.clone());
                 onEditorChange(editorHistory.current_step);
+            }
+            async function loadFromImage() { // what even is error handling
+                const clipboardContents = await navigator.clipboard.read();
+                for (const item of clipboardContents) {
+                    for (const mimeType of item.types) {
+                        if (mimeType === "image/png") {
+                            const pngImage = new Image();
+                            const blob = await item.getType("image/png");
+                            pngImage.onload = () => {
+                                ctx.drawImage(pngImage, 0, 0);
+                                URL.revokeObjectURL(pngImage.src);
+                                editorBoard = Board.from_serialized_bytes(dataFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height)));
+                                editorHistory.add_not_seen(editorBoard.clone());
+                                onEditorChange(editorHistory.current_step);
+                            }
+                            pngImage.src = URL.createObjectURL(blob);
+                        }
+                    }
+                }
             }
 
             function resizeLevel() {
@@ -394,6 +416,49 @@
                 }
                 const playerIndex = board.get_player();
                 drawSpace("playerTile", [playerIndex % width, (playerIndex - (playerIndex % width)) / width], width, height, ctx, canvas)
+            }
+
+            // no checks for if the data will fit
+            function drawData(bytes) { //todo make this not bad
+                let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                // put the size of the bytearray in the first 3 pixels = 12 indexes, gives 18 bits
+                for (let i = 0; i < 3; i++) {
+                    imageData.data[i*4] = ((imageData.data[i*4] >> 2) << 2) | ((bytes.length >> (6 * i)) & 0b11);
+                    imageData.data[i*4 + 1] = ((imageData.data[i*4 + 1] >> 2) << 2) | ((bytes.length >> (6 * i + 2)) & 0b11);
+                    imageData.data[i*4 + 2] = ((imageData.data[i*4 + 2] >> 2) << 2) | ((bytes.length >> (6 * i + 4)) & 0b11);
+                }
+                // store bytearray in bottom 2 bits of rgb of pixels
+                for (let i = 0; i < bytes.length; i++) {
+                    // shifting because idk how big they're stored
+                    imageData.data[i * 8 + 12] = ((imageData.data[i * 8 + 12] >> 2) << 2) | (bytes[i] & 0b11);
+                    imageData.data[i * 8 + 1 + 12] = ((imageData.data[i * 8 + 1 + 12] >> 2) << 2) | ((bytes[i] >> 2) & 0b11);
+                    imageData.data[i * 8 + 2 + 12] = ((imageData.data[i * 8 + 2 + 12] >> 2) << 2) | ((bytes[i] >> 4) & 0b11);
+                    // skip alpha channel
+                    imageData.data[i * 8 + 4 + 12] = ((imageData.data[i * 8 + 4 + 12] >> 2) << 2) | ((bytes[i] >> 6) & 0b11);
+                }
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            // no checks for valid data
+            function dataFromImageData(imageData) {
+                let bytes = [];
+                let numBytes = 0;
+                // get number of bytes from first 3 pixels
+                for (let i = 0; i < 3; i++) {
+                    numBytes |= (imageData.data[i*4] & 0b11) << (6*i);
+                    numBytes |= (imageData.data[i*4 + 1] & 0b11) << (6*i + 2);
+                    numBytes |= (imageData.data[i*4 + 2] & 0b11) << (6*i + 4);
+                }
+                for (let i = 0; i < numBytes; i++) {
+                    let byte = 0;
+                    // shifting because idk how big they're stored
+                    byte |= imageData.data[i * 8 + 12] & 0b11;
+                    byte |= (imageData.data[i * 8 + 12 + 1] & 0b11) << 2;
+                    byte |= (imageData.data[i * 8 + 12 + 2] & 0b11) << 4;
+                    byte |= (imageData.data[i * 8 + 12 + 4] & 0b11) << 6;
+                    bytes.push(byte);
+                }
+                return bytes
             }
 
             // Initialise side selector

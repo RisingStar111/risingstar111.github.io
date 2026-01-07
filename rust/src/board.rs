@@ -1,6 +1,9 @@
 use wasm_bindgen::prelude::*;
 use crate::block::{Block, Direction, Side, Space, Tile};
 use serde::{Serialize, Deserialize};
+use flate2::write::ZlibEncoder;
+use flate2::read::ZlibDecoder;
+use std::io::{Read, Write};
 
 #[derive(PartialEq)]
 #[derive(Serialize, Deserialize)]
@@ -29,13 +32,27 @@ impl Board {
         Board { grid: vec![Tile::default(); width * height], width, height, player: 0 }
     }
 
-    #[wasm_bindgen]
+    #[wasm_bindgen] // this adds 70kb rip
     pub fn from_serialized(data: &str) -> Board {
         serde_json::from_str(&data).unwrap()
     }
     #[wasm_bindgen]
     pub fn serialize(&self) -> String {
         serde_json::to_string(&self).unwrap()
+    }
+    #[wasm_bindgen] // this adds 50kb to the wasm file hmm
+    pub fn from_serialized_bytes(data: Vec<u8>) -> Board {
+        let mut decoder = ZlibDecoder::new(data.as_slice());
+        let mut json = String::new();
+        decoder.read_to_string(&mut json).unwrap();
+        serde_json::from_str(&json).unwrap()
+    }
+    #[wasm_bindgen]
+    pub fn serialize_bytes(&self) -> Vec<u8> {
+        let json = serde_json::to_string(&self).unwrap();
+        let mut encoder = ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(json.as_bytes()).unwrap();
+        encoder.finish().unwrap()
     }
 
     #[wasm_bindgen]

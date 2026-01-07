@@ -17,6 +17,11 @@ function getArrayJsValueFromWasm0(ptr, len) {
     return result;
 }
 
+function getArrayU8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
 let cachedDataViewMemory0 = null;
 function getDataViewMemory0() {
     if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
@@ -40,6 +45,13 @@ function getUint8ArrayMemory0() {
 
 function isLikeNone(x) {
     return x === undefined || x === null;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {
@@ -308,6 +320,15 @@ export class Board {
     remove_side_top() {
         wasm.board_remove_side_top(this.__wbg_ptr);
     }
+    /**
+     * @returns {Uint8Array}
+     */
+    serialize_bytes() {
+        const ret = wasm.board_serialize_bytes(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
     remove_side_left() {
         wasm.board_remove_side_left(this.__wbg_ptr);
     }
@@ -316,6 +337,16 @@ export class Board {
     }
     remove_side_bottom() {
         wasm.board_remove_side_bottom(this.__wbg_ptr);
+    }
+    /**
+     * @param {Uint8Array} data
+     * @returns {Board}
+     */
+    static from_serialized_bytes(data) {
+        const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.board_from_serialized_bytes(ptr0, len0);
+        return Board.__wrap(ret);
     }
     /**
      * @returns {Board}

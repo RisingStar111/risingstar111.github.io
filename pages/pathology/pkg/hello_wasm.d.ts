@@ -28,9 +28,11 @@ export class Board {
   add_side_bottom(): void;
   static from_serialized(data: string): Board;
   remove_side_top(): void;
+  serialize_bytes(): Uint8Array;
   remove_side_left(): void;
   remove_side_right(): void;
   remove_side_bottom(): void;
+  static from_serialized_bytes(data: Uint8Array): Board;
   clone(): Board;
   static default(width: number, height: number): Board;
   get_tile(index: number): Tile;
@@ -121,6 +123,7 @@ export interface InitOutput {
   readonly board_clone: (a: number) => number;
   readonly board_default: (a: number, b: number) => number;
   readonly board_from_serialized: (a: number, b: number) => number;
+  readonly board_from_serialized_bytes: (a: number, b: number) => number;
   readonly board_get_block_trbl: (a: number, b: number) => [number, number];
   readonly board_get_height: (a: number) => number;
   readonly board_get_index: (a: number, b: number, c: number) => number;
@@ -135,6 +138,7 @@ export interface InitOutput {
   readonly board_remove_side_right: (a: number) => void;
   readonly board_remove_side_top: (a: number) => void;
   readonly board_serialize: (a: number) => [number, number];
+  readonly board_serialize_bytes: (a: number) => [number, number];
   readonly board_set_block: (a: number, b: number, c: number) => void;
   readonly board_set_player: (a: number, b: number) => void;
   readonly board_set_space: (a: number, b: number, c: number) => void;
