@@ -611,6 +611,12 @@
                     }
                 }
             })
+            document.getElementById("canvas").addEventListener('mouseleave', (e) => {
+                if (playing) {
+                    lastMouseHoverIndex = -1;
+                    drawBoard(playHistory.get_current_board());
+                }
+            })
             document.getElementById("canvas").addEventListener('click', (e) => {
                 if (!playing) {
                     const rect = canvas.getBoundingClientRect();

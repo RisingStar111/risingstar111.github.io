@@ -319,7 +319,7 @@ impl Board {
         checked.insert(self.player, self.player);
         tocheck.push_back(self.player);
         while let Some(next) = tocheck.pop_front() {
-            for dir in [Direction::Up, Direction::Left, Direction::Down, Direction::Right] {
+            for dir in [Direction::Right, Direction::Left, Direction::Down, Direction::Up] {
                 if let Some(adjacent) = self.get_adjacent_tile(next, dir) {
                     // space or goal
                     if adjacent.0.block.is_none() && !checked.contains_key(&adjacent.1) {
