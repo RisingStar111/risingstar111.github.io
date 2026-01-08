@@ -3,7 +3,7 @@ use crate::block::{Block, Direction, Side, Space, Tile};
 use serde::{Serialize, Deserialize};
 use flate2::write::ZlibEncoder;
 use flate2::read::ZlibDecoder;
-use std::io::{Read, Write};
+use std::{collections::{HashMap, VecDeque}, io::{Read, Write}};
 
 #[derive(PartialEq)]
 #[derive(Serialize, Deserialize)]
@@ -309,5 +309,40 @@ impl Board {
             return StepOutcome::Stepped
         }
         StepOutcome::Blocked
+    }
+
+    // return a backward flow map giving an optimal route to each empty position
+    fn floodfill(&self) -> HashMap<usize, usize> {
+        // fill board // cheap so just does the whole thing
+        let mut tocheck = VecDeque::new();
+        let mut checked = HashMap::new();
+        checked.insert(self.player, self.player);
+        tocheck.push_back(self.player);
+        while let Some(next) = tocheck.pop_front() {
+            for dir in [Direction::Up, Direction::Left, Direction::Down, Direction::Right] {
+                if let Some(adjacent) = self.get_adjacent_tile(next, dir) {
+                    // space or goal
+                    if adjacent.0.block.is_none() && !checked.contains_key(&adjacent.1) {
+                        tocheck.push_back(adjacent.1);
+                        checked.insert(adjacent.1, next);
+                    }
+                }
+            }
+        }
+        checked
+    }
+
+    #[wasm_bindgen]
+    pub fn indices_on_path_to_index(&self, index: usize) -> Vec<usize> {
+        let fill = self.floodfill();
+        let mut backward = vec![];
+        let mut last = index;
+        while let Some(next) = fill.get(&last) {
+            if (*next == last) {break}
+            backward.push(last);
+            last = *next;
+        }
+        backward.reverse();
+        backward
     }
 }

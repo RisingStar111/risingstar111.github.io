@@ -175,6 +175,9 @@
             <br>
             <p id="stepCountText">Step: 0</p>
             <input type="range" min="0" max="0" id="stepSlider">
+            <br>
+            <input type="checkbox" id="highlightPath">
+            <label for="highlightPath">Highlight path</label>
         </div>
     </div>
     <dialog id="levelDataDialog">
@@ -208,6 +211,8 @@
             let playing = false;
             let fullWall = () => document.getElementById("fullWalls").checked;
             let gridOutlines = () => document.getElementById("gridOutlines").checked;
+            let highlightPath = () => document.getElementById("highlightPath").checked;
+            let lastMouseHoverIndex = -1;
 
             const previewCanvas = document.getElementById("blockPreview");
             const previewCtx = previewCanvas.getContext("2d");
@@ -399,6 +404,11 @@
                 // reset image smoothing to false because changing dimensions resets entire canvas
                 ctx.imageSmoothingEnabled=false;
 
+                let highlights = [];
+                if (playing && highlightPath()) {
+                    highlights = board.indices_on_path_to_index(lastMouseHoverIndex);
+                }
+
                 const width = board.get_width();
                 const height = board.get_height();
                 for (let x = 0; x < width; x++) {
@@ -409,6 +419,11 @@
                         drawSpace(space, [x, y], width, height, ctx, canvas);
                         if (gridOutlines()) {
                             drawSpace("gridOutline", [x, y], width, height, ctx, canvas);
+                        }
+                        if (playing && highlightPath()) { // better place to put this but haven't worked out everyhow i want highlights
+                            if (highlights.includes(x + y*width)) {
+                                drawSpace("spaceHighlight", [x, y], width, height, ctx, canvas);
+                            }
                         }
                         if (block != null) {
                             // todo don't reuse
@@ -584,6 +599,18 @@
                 }
             });
 
+            document.getElementById("canvas").addEventListener('mousemove', (e) => {
+                if (playing) {
+                    const rect = canvas.getBoundingClientRect();
+                    const clickX = (e.clientX - rect.left) / canvas.width;
+                    const clickY = (e.clientY - rect.top) / canvas.height;
+                    const mouseIndex = editorBoard.get_index(clickX, clickY);
+                    if (mouseIndex != lastMouseHoverIndex) {
+                        lastMouseHoverIndex = mouseIndex;
+                        drawBoard(playHistory.get_current_board());
+                    }
+                }
+            })
             document.getElementById("canvas").addEventListener('click', (e) => {
                 if (!playing) {
                     const rect = canvas.getBoundingClientRect();
@@ -640,6 +667,7 @@
             "playerTile" : 68,
             "wallTile" : 102,
             "gridOutline" : 136,
+            "spaceHighlight" : 170,
             }
         function drawBlock(blockSides, gridPos, gridWidth, gridHeight, ctx, canvas) {
             for (let i = 0; i < 4; i++) {
