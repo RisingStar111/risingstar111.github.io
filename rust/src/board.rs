@@ -338,7 +338,7 @@ impl Board {
         let mut backward = vec![];
         let mut last = index;
         while let Some(next) = fill.get(&last) {
-            if (*next == last) {break}
+            if *next == last {break}
             backward.push(last);
             last = *next;
         }
