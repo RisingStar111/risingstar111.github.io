@@ -145,6 +145,8 @@
                     <br>
                     <input type="checkbox" id="fullWalls" checked>
                     <label for="fullWalls">Fill walls</label>
+                    <input type="checkbox" id="gridOutlines" style="margin-left: 10px">
+                    <label for="gridOutlines">Grid</label>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: start;">
                     <gridselect style="float: left">
@@ -205,6 +207,7 @@
             let clearPlacement = () => document.getElementById("clearPlacement").checked;
             let playing = false;
             let fullWall = () => document.getElementById("fullWalls").checked;
+            let gridOutlines = () => document.getElementById("gridOutlines").checked;
 
             const previewCanvas = document.getElementById("blockPreview");
             const previewCtx = previewCanvas.getContext("2d");
@@ -229,6 +232,7 @@
             document.getElementById("stepSlider").oninput = onSliderChange;
             document.getElementById("editorSlider").oninput = onSliderChange;
             document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard(playing ? playBoard : editorBoard)};
+            document.getElementById("gridOutlines").onclick = () => {drawBoard(playing ? playBoard : editorBoard)};
             document.getElementById("addTop").onclick = () => add_side("top");
             document.getElementById("subTop").onclick = () => remove_side("top");
             document.getElementById("addLeft").onclick = () => add_side("left");
@@ -403,6 +407,9 @@
                         const block = board.get_block_trbl(index);
                         const space = board.get_space(index);
                         drawSpace(space, [x, y], width, height, ctx, canvas);
+                        if (gridOutlines()) {
+                            drawSpace("gridOutline", [x, y], width, height, ctx, canvas);
+                        }
                         if (block != null) {
                             // todo don't reuse
                             if (fullWall() && arrayEqual(block, ["wallSide", "wallSide", "wallSide", "wallSide"])) {
@@ -632,6 +639,7 @@
             "goalSpace" : 34,
             "playerTile" : 68,
             "wallTile" : 102,
+            "gridOutline" : 136,
             }
         function drawBlock(blockSides, gridPos, gridWidth, gridHeight, ctx, canvas) {
             for (let i = 0; i < 4; i++) {
