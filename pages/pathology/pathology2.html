@@ -304,7 +304,7 @@
                             pngImage.onload = () => {
                                 ctx.drawImage(pngImage, 0, 0);
                                 URL.revokeObjectURL(pngImage.src);
-                                editorBoard = Board.from_serialized_bytes(dataFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height)));
+                                editorBoard = Board.from_serialized_bytes(dataFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height).data));
                                 editorHistory.add_not_seen(editorBoard.clone());
                                 onEditorChange(editorHistory.current_step);
                             }
@@ -419,44 +419,52 @@
             }
 
             // no checks for if the data will fit
-            function drawData(bytes) { //todo make this not bad
-                let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                // put the size of the bytearray in the first 3 pixels = 12 indexes, gives 18 bits
-                for (let i = 0; i < 3; i++) {
-                    imageData.data[i*4] = ((imageData.data[i*4] >> 2) << 2) | ((bytes.length >> (6 * i)) & 0b11);
-                    imageData.data[i*4 + 1] = ((imageData.data[i*4 + 1] >> 2) << 2) | ((bytes.length >> (6 * i + 2)) & 0b11);
-                    imageData.data[i*4 + 2] = ((imageData.data[i*4 + 2] >> 2) << 2) | ((bytes.length >> (6 * i + 4)) & 0b11);
+            function drawData(bytes) { //todo make this not bad // better but still don't like it
+                let image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                let data = image.data;
+                // IMPORTANT alpha channel gets reset to 255 on render so must be skipped
+                // llm suggestion to extract pixel management into a function
+                let p = 0;
+                const setNextPixel = (v) => {
+                    data[p] = (data[p] & ~0b11) | (v & 0b11);
+                    // next rgb, skipping alpha (4th channel)
+                    p++;
+                    if (p % 4 == 3) {p++}
                 }
-                // store bytearray in bottom 2 bits of rgb of pixels
-                for (let i = 0; i < bytes.length; i++) {
-                    // shifting because idk how big they're stored
-                    imageData.data[i * 8 + 12] = ((imageData.data[i * 8 + 12] >> 2) << 2) | (bytes[i] & 0b11);
-                    imageData.data[i * 8 + 1 + 12] = ((imageData.data[i * 8 + 1 + 12] >> 2) << 2) | ((bytes[i] >> 2) & 0b11);
-                    imageData.data[i * 8 + 2 + 12] = ((imageData.data[i * 8 + 2 + 12] >> 2) << 2) | ((bytes[i] >> 4) & 0b11);
-                    // skip alpha channel
-                    imageData.data[i * 8 + 4 + 12] = ((imageData.data[i * 8 + 4 + 12] >> 2) << 2) | ((bytes[i] >> 6) & 0b11);
+                // first add bottom 16 bits of length (bytes is a Uint8Array, so is unextendable)
+                // compiler unlikely to unroll this but not expensive
+                for (let i = 0; i < 2 * 8; i += 2) {
+                    setNextPixel(bytes.length >> i);
                 }
-                ctx.putImageData(imageData, 0, 0);
+                // pack bytes into bottom 2 bits of rgb of pixels
+                for (let i = 0; i < bytes.length * 8; i += 2) {
+                    setNextPixel(bytes[i >> 3] >> (i % 8));
+                }
+                ctx.putImageData(image, 0, 0);
             }
-
             // no checks for valid data
-            function dataFromImageData(imageData) {
+            function dataFromImageData(data) {
                 let bytes = [];
                 let numBytes = 0;
-                // get number of bytes from first 3 pixels
-                for (let i = 0; i < 3; i++) {
-                    numBytes |= (imageData.data[i*4] & 0b11) << (6*i);
-                    numBytes |= (imageData.data[i*4 + 1] & 0b11) << (6*i + 2);
-                    numBytes |= (imageData.data[i*4 + 2] & 0b11) << (6*i + 4);
+                let p = 0;
+                const getNextBits = () => {
+                    const o = data[p] & 0b11;
+                    p++;
+                    if (p % 4 == 3) {p++}
+                    return o;
                 }
-                for (let i = 0; i < numBytes; i++) {
-                    let byte = 0;
-                    // shifting because idk how big they're stored
-                    byte |= imageData.data[i * 8 + 12] & 0b11;
-                    byte |= (imageData.data[i * 8 + 12 + 1] & 0b11) << 2;
-                    byte |= (imageData.data[i * 8 + 12 + 2] & 0b11) << 4;
-                    byte |= (imageData.data[i * 8 + 12 + 4] & 0b11) << 6;
-                    bytes.push(byte);
+                // get number of bytes from first 16 bits
+                for (let i = 0; i < 2 * 8; i += 2) {
+                    numBytes |= getNextBits() << i;
+                }
+                // read bytedata
+                let byte = 0;
+                for (let i = 0; i < numBytes * 8; i += 2) {
+                    byte |= getNextBits() << (i % 8);
+                    if (i % 8 == 6) {
+                        bytes.push(byte);
+                        byte = 0;
+                    }
                 }
                 return bytes
             }
