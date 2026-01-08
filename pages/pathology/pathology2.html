@@ -618,11 +618,11 @@
                 }
             })
             document.getElementById("canvas").addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = (e.clientX - rect.left) / canvas.width;
+                const clickY = (e.clientY - rect.top) / canvas.height;
+                const clickIndex = editorBoard.get_index(clickX, clickY);
                 if (!playing) {
-                    const rect = canvas.getBoundingClientRect();
-                    const clickX = (e.clientX - rect.left) / canvas.width;
-                    const clickY = (e.clientY - rect.top) / canvas.height;
-                    const clickIndex = editorBoard.get_index(clickX, clickY);
                     if (placeLayer == "block") {
                         editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_trbl(selectedSides[0], selectedSides[1], selectedSides[2], selectedSides[3]));
                     } else if (placeLayer == "space") {
@@ -645,6 +645,10 @@
                     }
                     editorHistory.add_not_seen(editorBoard.clone());
                     onEditorChange(editorHistory.current_step);
+                // playing
+                } else {
+                    playHistory.move_to_index(clickIndex);
+                    onStepChange(playHistory.current_step);
                 }
             });
 

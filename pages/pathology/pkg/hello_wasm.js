@@ -524,6 +524,12 @@ export class BoardHistory {
         wasm.boardhistory_add_not_seen(this.__wbg_ptr, ptr0);
     }
     /**
+     * @param {number} index
+     */
+    move_to_index(index) {
+        wasm.boardhistory_move_to_index(this.__wbg_ptr, index);
+    }
+    /**
      * @returns {Board}
      */
     get_current_board() {

@@ -52,6 +52,7 @@ export class BoardHistory {
   [Symbol.dispose](): void;
   static from_board(board: Board): BoardHistory;
   add_not_seen(new_board: Board): void;
+  move_to_index(index: number): void;
   get_current_board(): Board;
   get_history_length(): number;
   step(dir: Direction): void;
@@ -151,6 +152,7 @@ export interface InitOutput {
   readonly boardhistory_from_board: (a: number) => number;
   readonly boardhistory_get_current_board: (a: number) => number;
   readonly boardhistory_get_history_length: (a: number) => number;
+  readonly boardhistory_move_to_index: (a: number, b: number) => void;
   readonly boardhistory_step: (a: number, b: number) => void;
   readonly __wbindgen_externrefs: WebAssembly.Table;
   readonly __externref_drop_slice: (a: number, b: number) => void;

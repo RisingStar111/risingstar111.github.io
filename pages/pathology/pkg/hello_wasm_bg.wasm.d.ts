@@ -52,6 +52,7 @@ export const boardhistory_add_not_seen: (a: number, b: number) => void;
 export const boardhistory_from_board: (a: number) => number;
 export const boardhistory_get_current_board: (a: number) => number;
 export const boardhistory_get_history_length: (a: number) => number;
+export const boardhistory_move_to_index: (a: number, b: number) => void;
 export const boardhistory_step: (a: number, b: number) => void;
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __externref_drop_slice: (a: number, b: number) => void;

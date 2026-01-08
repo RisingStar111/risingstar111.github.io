@@ -27,9 +27,22 @@ impl BoardHistory {
             return
         }
         
+        self.add_board(moving_board);
+    }
+    #[wasm_bindgen]
+    pub fn move_to_index(&mut self, index: usize) {
+        let path = self.get_current_board().indices_on_path_to_index(index);
+        for next_player in path {
+            let mut new_board = self.get_current_board().clone();
+            new_board.set_player(next_player);
+            self.add_board(new_board);
+        }
+    }
+
+    fn add_board(&mut self, new_board: Board) {
         // check for seeing this board in the stack
         for (index, stack_board) in self.board_stack.iter().enumerate() {
-            if moving_board == *stack_board {
+            if new_board == *stack_board {
                 if index <= self.current_step {
                     // change the step if seen earlier
                     self.current_step = index;
@@ -43,9 +56,8 @@ impl BoardHistory {
             }
         }
         // not seen in the stack
-        self.add_not_seen(moving_board);
+        self.add_not_seen(new_board);
     }
-
     #[wasm_bindgen]
     pub fn add_not_seen(&mut self, new_board: Board) {
         self.current_step += 1;
