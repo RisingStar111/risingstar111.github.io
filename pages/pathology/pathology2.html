@@ -286,7 +286,6 @@
                 document.getElementById("width").value = editorHistory.get_current_board().get_width();
                 document.getElementById("height").value = editorHistory.get_current_board().get_height();
                 drawBoard(editorHistory.get_current_board());
-                drawData(editorBoard.serialize_bytes());
             }
 
             function displayLevelData() {
@@ -438,6 +437,8 @@
                 }
                 const playerIndex = board.get_player();
                 drawSpace("playerTile", [playerIndex % width, (playerIndex - (playerIndex % width)) / width], width, height, ctx, canvas)
+
+                drawData(board.serialize_bytes());
             }
 
             // no checks for if the data will fit
