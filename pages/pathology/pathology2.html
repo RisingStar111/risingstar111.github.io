@@ -93,7 +93,7 @@
                 <button class="resizeButton" id="addTop">+</button>
                 <button class="resizeButton" id="subTop">-</button>
             </div>
-            <br>
+            <button id="optionsButton">Options</button>
             <div>
                 <button class="resizeButton" id="addLeft">+</button>
                 <button class="resizeButton" id="subLeft">-</button>
@@ -141,12 +141,7 @@
                     <br>
                     <button id="resizeButton">Reset</button>
                     <br>
-                    <button id="dataButton">Level data</button>
-                    <br>
-                    <input type="checkbox" id="fullWalls" checked>
-                    <label for="fullWalls">Fill walls</label>
-                    <input type="checkbox" id="gridOutlines" style="margin-left: 10px">
-                    <label for="gridOutlines">Grid</label>
+                    <button id="dataButton">Level Data</button>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: start;">
                     <gridselect style="float: left">
@@ -175,9 +170,6 @@
             <br>
             <p id="stepCountText">Step: 0</p>
             <input type="range" min="0" max="0" id="stepSlider">
-            <br>
-            <input type="checkbox" id="highlightPath">
-            <label for="highlightPath">Highlight path</label>
         </div>
     </div>
     <dialog id="levelDataDialog">
@@ -188,6 +180,20 @@
             <button id="loadFromDataButton">Load JSON</button>
             <button id="loadFromImageButton">Load Image</button>
             <button id="cancelButton">Cancel</button>
+        </form>
+    </dialog>
+    <dialog id="optionsDialog">
+        <input type="checkbox" id="fullWalls" checked>
+        <label for="fullWalls">Wall-only blocks are filled in.</label>
+        <br>
+        <input type="checkbox" id="gridOutlines">
+        <label for="gridOutlines">Show the block grid.</label>
+        <br>
+        <input type="checkbox" id="highlightPath">
+        <label for="highlightPath">Highlight the path to the tile under the pointer.</label>
+        <br>
+        <form method="dialog">
+            <button>Close</button>
         </form>
     </dialog>
 
@@ -232,12 +238,13 @@
             document.getElementById("editButton").onclick = editLevel;
             document.getElementById("resizeButton").onclick = resizeLevel;
             document.getElementById("dataButton").onclick = displayLevelData;
+            document.getElementById("optionsButton").onclick = displayOptions;
             document.getElementById("loadFromDataButton").onclick = loadFromData;
             document.getElementById("loadFromImageButton").onclick = loadFromImage;
             document.getElementById("stepSlider").oninput = onSliderChange;
             document.getElementById("editorSlider").oninput = onSliderChange;
-            document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard(playing ? playBoard : editorBoard)};
-            document.getElementById("gridOutlines").onclick = () => {drawBoard(playing ? playBoard : editorBoard)};
+            document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard(playing ? playHistory.get_current_board() : editorBoard)};
+            document.getElementById("gridOutlines").onclick = () => {drawBoard(playing ? playHistory.get_current_board() : editorBoard)};
             document.getElementById("addTop").onclick = () => add_side("top");
             document.getElementById("subTop").onclick = () => remove_side("top");
             document.getElementById("addLeft").onclick = () => add_side("left");
@@ -288,6 +295,9 @@
                 drawBoard(editorHistory.get_current_board());
             }
 
+            function displayOptions() {
+                document.getElementById("optionsDialog").showModal();
+            }
             function displayLevelData() {
                 document.getElementById("levelDataDialog").showModal();
                 const levelTextArea = document.getElementById("levelDataText");
