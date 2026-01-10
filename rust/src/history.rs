@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::*;
-use crate::{block::Direction, board::{Board, StepOutcome}};
+use crate::{block::Direction, board::{Board}};
 
 
 // the board history contains a minimal representation of the traversal of the level
