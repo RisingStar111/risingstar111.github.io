@@ -1,5 +1,4 @@
 use wasm_bindgen::prelude::*;
-use serde::{Serialize, Deserialize};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -24,7 +23,6 @@ impl std::ops::Neg for Direction {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Serialize, Deserialize)]
 pub struct Tile {
     pub block: Option<Block>,
     pub space: Space
@@ -46,11 +44,31 @@ impl Tile {
     pub fn set_space(&mut self, new_space: Space) {
         self.space = new_space
     }
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.push(self.space.serialize());
+        if self.block.is_none() {
+            bytes.push(0);
+        } else {
+            bytes.append(&mut self.block.unwrap().serialize());
+        }
+        bytes
+    }
+    pub fn steal_tile(data: &mut Vec<u8>) -> Tile {
+        let mut tile = Tile::default();
+        tile.space = Space::from_byte(data[0]);
+        if data[1] == 0 {
+            data.drain(0..2);
+            return tile
+        }
+        tile.block = Some(Block::from_trbl_bytes(data[1], data[4], data[2], data[3]));
+        data.drain(0..5);
+        tile
+    }
 }
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Serialize, Deserialize)]
 pub enum Space {
     Empty,
     Goal,
@@ -63,11 +81,23 @@ impl Space {
             _ => false,
         }
     }
+    pub fn serialize(&self) -> u8 {
+        match *self {
+            Space::Empty => 1,
+            Space::Goal => 2,
+        }
+    }
+    pub fn from_byte(byte: u8) -> Space {
+        match byte {
+            1 => Space::Empty,
+            2 => Space::Goal,
+            _ => panic!()
+        }
+    }
 }
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Serialize, Deserialize)]
 pub struct Block {
     pub top: Side,
     pub bottom: Side,
@@ -77,7 +107,6 @@ pub struct Block {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Serialize, Deserialize)]
 pub enum Side {
     Wall,
     Basic,
@@ -111,5 +140,32 @@ impl Block {
             Direction::Left => self.right,
             Direction::Right => self.left,
         }
+    }
+    pub fn serialize(&self) -> Vec<u8> {
+        let parse = |s: Side| {
+            match s {
+                Side::Wall => 1,
+                Side::Basic => 2,
+                Side::Ice => 3,
+                Side::Swap => 4,
+                Side::Hole => 5,
+                Side::PushSwap => 6,
+            }
+        };
+        vec![parse(self.top), parse(self.bottom), parse(self.left), parse(self.right)]
+    }
+    pub fn from_trbl_bytes(top: u8, right: u8, bottom: u8, left: u8) -> Block {
+        let parse = |s: u8| {
+            match s {
+                1 => Side::Wall,
+                2 => Side::Basic,
+                3 => Side::Ice,
+                4 => Side::Swap,
+                5 => Side::Hole,
+                6 => Side::PushSwap,
+                _ => panic!()
+            }
+        };
+        Block {top: parse(top), bottom: parse(bottom), left: parse(left), right: parse(right)}
     }
 }

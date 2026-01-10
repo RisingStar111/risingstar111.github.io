@@ -228,6 +228,17 @@ export class Block {
         return ret;
     }
     /**
+     * @param {number} top
+     * @param {number} right
+     * @param {number} bottom
+     * @param {number} left
+     * @returns {Block}
+     */
+    static from_trbl_bytes(top, right, bottom, left) {
+        const ret = wasm.block_from_trbl_bytes(top, right, bottom, left);
+        return Block.__wrap(ret);
+    }
+    /**
      * @param {string} top
      * @param {string} right
      * @param {string} bottom
@@ -245,6 +256,15 @@ export class Block {
         const len3 = WASM_VECTOR_LEN;
         const ret = wasm.block_from_trbl(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
         return Block.__wrap(ret);
+    }
+    /**
+     * @returns {Uint8Array}
+     */
+    serialize() {
+        const ret = wasm.block_serialize(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
     }
 }
 if (Symbol.dispose) Block.prototype[Symbol.dispose] = Block.prototype.free;

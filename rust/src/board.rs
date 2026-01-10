@@ -1,12 +1,8 @@
 use wasm_bindgen::prelude::*;
 use crate::block::{Block, Direction, Side, Space, Tile};
-use serde::{Serialize, Deserialize};
-use flate2::write::ZlibEncoder;
-use flate2::read::ZlibDecoder;
-use std::{collections::{HashMap, VecDeque}, io::{Read, Write}};
+use std::{collections::{HashMap, VecDeque}};
 
 #[derive(PartialEq)]
-#[derive(Serialize, Deserialize)]
 #[wasm_bindgen]
 pub struct Board {
     grid: Vec<Tile>,
@@ -32,27 +28,54 @@ impl Board {
         Board { grid: vec![Tile::default(); width * height], width, height, player: 0 }
     }
 
-    #[wasm_bindgen] // this adds 70kb rip
+    #[wasm_bindgen]
     pub fn from_serialized(data: &str) -> Board {
-        serde_json::from_str(&data).unwrap()
+        Board::from_serialized_bytes(Board::braille_decode(data))
     }
     #[wasm_bindgen]
     pub fn serialize(&self) -> String {
-        serde_json::to_string(&self).unwrap()
+        Board::braille_encode(self.serialize_bytes())
     }
-    #[wasm_bindgen] // this adds 50kb to the wasm file hmm
-    pub fn from_serialized_bytes(data: Vec<u8>) -> Board {
-        let mut decoder = ZlibDecoder::new(data.as_slice());
-        let mut json = String::new();
-        decoder.read_to_string(&mut json).unwrap();
-        serde_json::from_str(&json).unwrap()
+    #[wasm_bindgen]
+    pub fn from_serialized_bytes(mut data: Vec<u8>) -> Board {
+        let width = Board::steal_u32(&mut data);
+        let height = Board::steal_u32(&mut data);
+        let player = Board::steal_u32(&mut data);
+        let mut board = Board::default(width, height);
+        for i in 0..(width*height) {
+            let tile = Tile::steal_tile(&mut data);
+            board.grid[i] = tile;
+        }
+        board.set_player(player);
+        board
     }
     #[wasm_bindgen]
     pub fn serialize_bytes(&self) -> Vec<u8> {
-        let json = serde_json::to_string(&self).unwrap();
-        let mut encoder = ZlibEncoder::new(Vec::new(), flate2::Compression::default());
-        encoder.write_all(json.as_bytes()).unwrap();
-        encoder.finish().unwrap()
+        let mut bytes = vec![];
+        bytes.append(&mut self.width.to_be_bytes().to_vec());
+        bytes.append(&mut self.height.to_be_bytes().to_vec());
+        bytes.append(&mut self.player.to_be_bytes().to_vec());
+        for tile in &self.grid {
+            bytes.append(&mut tile.serialize());
+        }
+        bytes
+    }
+    fn steal_u32(byte_array: &mut Vec<u8>) -> usize { // says usize but is really u32 (why not 64?)
+        let remainder = byte_array.drain(0..4);
+        let mut number = 0;
+        for byte in remainder {
+            number <<= 8;
+            number |= byte as usize;
+        }
+        number
+    }
+    fn braille_encode(bytes: Vec<u8>) -> String {
+        bytes.iter().map(|b| {
+            char::from_u32(0x2800 + *b as u32).unwrap()
+        }).collect()
+    }
+    fn braille_decode(braille: &str) -> Vec<u8> {
+        braille.chars().map(|c| c as u8).collect()
     }
 
     #[wasm_bindgen]
