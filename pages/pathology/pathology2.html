@@ -328,6 +328,8 @@
                             const pngImage = new Image();
                             const blob = await item.getType("image/png");
                             pngImage.onload = () => {
+                                canvas.setAttribute("width", pngImage.width);
+                                canvas.setAttribute("height", pngImage.height);
                                 ctx.drawImage(pngImage, 0, 0);
                                 URL.revokeObjectURL(pngImage.src);
                                 editorBoard = Board.from_serialized_bytes(dataFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height).data));
