@@ -98,7 +98,7 @@
                 <button class="resizeButton" id="addLeft">+</button>
                 <button class="resizeButton" id="subLeft">-</button>
             </div>
-            <canvas id="canvas" width="320" height="320"></canvas>
+            <canvas id="canvas" width="320" height="320" style="touch-action: none;"></canvas>
             <div>
                 <button class="resizeButton" id="addRight">+</button>
                 <button class="resizeButton" id="subRight">-</button>
@@ -189,8 +189,12 @@
         <input type="checkbox" id="gridOutlines">
         <label for="gridOutlines">Show the block grid.</label>
         <br>
-        <input type="checkbox" id="highlightPath">
-        <label for="highlightPath">Highlight the path to the tile under the pointer.</label>
+        <label for="touchControlMode">Touch control method:</label>
+        <select id="touchControlMode">
+            <option value="tapMove">Tap to move</option>
+            <option value="swipeMove">Swipe to step</option>
+            <option value="dragMove">Drag to move</option>
+        </select>
         <br>
         <form method="dialog">
             <button>Close</button>
@@ -217,8 +221,12 @@
             let playing = false;
             let fullWall = () => document.getElementById("fullWalls").checked;
             let gridOutlines = () => document.getElementById("gridOutlines").checked;
-            let highlightPath = () => document.getElementById("highlightPath").checked;
+            let touchControlMode = () => document.getElementById("touchControlMode").value;
             let lastMouseHoverIndex = -1;
+            let deltaMouseX = -1;
+            let deltaMouseY = -1;
+            let lastMouseX = -1;
+            let lastMouseY = -1;
 
             const previewCanvas = document.getElementById("blockPreview");
             const previewCtx = previewCanvas.getContext("2d");
@@ -414,7 +422,7 @@
                 ctx.imageSmoothingEnabled=false;
 
                 let highlights = [];
-                if (playing && highlightPath()) {
+                if (playing && touchControlMode() == "tapMove") {
                     highlights = board.indices_on_path_to_index(lastMouseHoverIndex);
                 }
 
@@ -429,7 +437,7 @@
                         if (gridOutlines()) {
                             drawSpace("gridOutline", [x, y], width, height, ctx, canvas);
                         }
-                        if (playing && highlightPath()) { // better place to put this but haven't worked out everyhow i want highlights
+                        if (playing && touchControlMode() == "tapMove") { // better place to put this but haven't worked out everyhow i want highlights
                             if (highlights.includes(x + y*width)) {
                                 drawSpace("spaceHighlight", [x, y], width, height, ctx, canvas);
                             }
@@ -610,7 +618,23 @@
                 }
             });
 
-            document.getElementById("canvas").addEventListener('mousemove', (e) => {
+            document.getElementById("canvas").addEventListener('pointerdown', (e) => {
+                if (playing) {
+                    deltaMouseX = 0;
+                    deltaMouseY = 0;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
+            })
+            document.getElementById("canvas").addEventListener('pointerup', (e) => {
+                if (playing) {
+                    deltaMouseX = null;
+                    deltaMouseY = null;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
+            })
+            document.getElementById("canvas").addEventListener('pointermove', (e) => {
                 if (playing) {
                     const rect = canvas.getBoundingClientRect();
                     const clickX = (e.clientX - rect.left) / canvas.width;
@@ -619,6 +643,49 @@
                     if (mouseIndex != lastMouseHoverIndex) {
                         lastMouseHoverIndex = mouseIndex;
                         drawBoard(playHistory.get_current_board());
+                    }
+                    if (deltaMouseX !== null) {
+                        deltaMouseX += e.clientX - lastMouseX;
+                        deltaMouseY += e.clientY - lastMouseY;
+                        lastMouseX = e.clientX;
+                        lastMouseY = e.clientY;
+                        if (touchControlMode() == "swipeMove") {
+                            if (Math.abs(deltaMouseX) > 128) {
+                                if (deltaMouseX < 0) {
+                                    moveHandler(Direction.Left);
+                                } else {
+                                    moveHandler(Direction.Right);
+                                }
+                                deltaMouseX = null;
+                                deltaMouseY = null;
+                            }
+                            if (Math.abs(deltaMouseY) > 128) {
+                                if (deltaMouseY < 0) {
+                                    moveHandler(Direction.Up);
+                                } else {
+                                    moveHandler(Direction.Down);
+                                }
+                                deltaMouseX = null;
+                                deltaMouseY = null;
+                            }
+                        } else if (touchControlMode() == "dragMove") {
+                            if (Math.abs(deltaMouseX) > 64) {
+                                if (deltaMouseX < 0) {
+                                    moveHandler(Direction.Left);
+                                } else {
+                                    moveHandler(Direction.Right);
+                                }
+                                deltaMouseX = 0;
+                            }
+                            if (Math.abs(deltaMouseY) > 64) {
+                                if (deltaMouseY < 0) {
+                                    moveHandler(Direction.Up);
+                                } else {
+                                    moveHandler(Direction.Down);
+                                }
+                                deltaMouseY = 0;
+                            }
+                        }
                     }
                 }
             })
@@ -658,8 +725,10 @@
                     onEditorChange(editorHistory.current_step);
                 // playing
                 } else {
-                    playHistory.move_to_index(clickIndex);
-                    onStepChange(playHistory.current_step);
+                    if (touchControlMode() == "tapMove") {
+                        playHistory.move_to_index(clickIndex);
+                        onStepChange(playHistory.current_step);
+                    }
                 }
             });
 
