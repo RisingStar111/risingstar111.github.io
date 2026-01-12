@@ -703,28 +703,38 @@
                 const clickY = (e.clientY - rect.top) / canvas.height;
                 const clickIndex = editorBoard.get_index(clickX, clickY);
                 if (!playing) {
-                    if (placeLayer == "block") {
-                        editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_trbl(selectedSides[0], selectedSides[1], selectedSides[2], selectedSides[3]));
-                    } else if (placeLayer == "space") {
-                        if (space == "playerTile") {
-                            editorBoard.set_block(clickIndex, null);
-                            editorBoard.set_player(clickIndex);
-                        } else {
-                            switch (space) {
-                                case "emptySpace":
-                                    editorBoard.set_space(clickIndex, Space.Empty);
-                                    break;
-                                case "goalSpace":
-                                    editorBoard.set_space(clickIndex, Space.Goal);
-                                    break;
-                            
-                                default:
-                                    break;
-                            }
+                    if (e.ctrlKey) {
+                        // copy block at click
+                        const clickedBlock = editorBoard.get_block_trbl(clickIndex);
+                        if (clickedBlock != null) {
+                            selectedSides = clickedBlock;
+                            drawBlockPreview();
                         }
                     }
-                    editorHistory.add_not_seen(editorBoard.clone());
-                    onEditorChange(editorHistory.current_step);
+                    else {
+                        if (placeLayer == "block") {
+                            editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_trbl(selectedSides[0], selectedSides[1], selectedSides[2], selectedSides[3]));
+                        } else if (placeLayer == "space") {
+                            if (space == "playerTile") {
+                                editorBoard.set_block(clickIndex, null);
+                                editorBoard.set_player(clickIndex);
+                            } else {
+                                switch (space) {
+                                    case "emptySpace":
+                                        editorBoard.set_space(clickIndex, Space.Empty);
+                                        break;
+                                    case "goalSpace":
+                                        editorBoard.set_space(clickIndex, Space.Goal);
+                                        break;
+                                
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+                        editorHistory.add_not_seen(editorBoard.clone());
+                        onEditorChange(editorHistory.current_step);
+                    }
                 // playing
                 } else {
                     if (touchControlMode() == "tapMove") {
