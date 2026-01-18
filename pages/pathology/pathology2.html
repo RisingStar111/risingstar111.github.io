@@ -35,8 +35,8 @@
         
         #canvasContainer {
             display: grid;
-            grid-template-columns: 50px auto 50px;
-            grid-template-rows: 50px auto 50px;
+            grid-template-columns: 50px 1fr 50px;
+            grid-template-rows: 50px 1fr 50px;
             align-items: center;
             justify-items: center;
         }
@@ -98,7 +98,7 @@
                 <button class="resizeButton" id="addLeft">+</button>
                 <button class="resizeButton" id="subLeft">-</button>
             </div>
-            <canvas id="canvas" width="320" height="320" style="touch-action: none;"></canvas>
+            <canvas id="canvas" width=320 height=320 style="touch-action: none;"></canvas>
             <div>
                 <button class="resizeButton" id="addRight">+</button>
                 <button class="resizeButton" id="subRight">-</button>
@@ -407,13 +407,34 @@
                 }
                 drawBlock(selectedSides, [0, 0], 1, 1, previewCtx, previewCanvas);
             }
-            function drawBoard(board) {
+            function drawBoard(board, forcedSize = null) {
+                let baseSide;
+                if (forcedSize != null) {
+                    baseSide = forcedSize;
+                } else {
+                    // allow page formatting to resize the grid to fit
+                    const gridContainer = document.getElementById("canvasContainer");
+                    gridContainer.style.gridTemplateColumns = '50px minmax(0px, 1fr) 50px';
+                    gridContainer.style.gridTemplateRows = '50px minmax(0px, 1fr) 50px';
+                    // make canvas view big to force grid to ?
+                    canvas.width = 1000;
+                    canvas.height = 1000;
+                    // force reflow and get pixel track sizes
+                    const gridSizes = window.getComputedStyle(gridContainer).grid.split(" ");
+                    // force a maximum size of 320px
+                    const canvasWidth = Math.min(320, parseInt(gridSizes[5]));
+                    const canvasHeight = Math.min(320, parseInt(gridSizes[1]));
+                    // set the grid to scale to the content
+                    gridContainer.style.gridTemplateColumns = '50px auto 50px';
+                    gridContainer.style.gridTemplateRows = '50px auto 50px';
+                    // set the base side to go through squareification
+                    baseSide = Math.min(canvasWidth, canvasHeight);
+                }
                 // resize canvas to a square ratio
-                const baseSide = 320; // change this when allowing resizeable canvas
                 let ratio = board.get_width() / board.get_height();
                 if (ratio > 1) {
                     // shrink height
-                    canvas.setAttribute("width", baseSide);
+                    canvas.setAttribute("width",  baseSide);
                     canvas.setAttribute("height",  baseSide / ratio);
                 } else {
                     // shrink width
@@ -484,6 +505,8 @@
                     setNextPixel(bytes[i >> 3] >> (i % 8));
                 }
                 ctx.putImageData(image, 0, 0);
+                console.log(bytes)
+                dataFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height).data)
             }
             // no checks for valid data
             function dataFromImageData(data) {
@@ -509,6 +532,7 @@
                         byte = 0;
                     }
                 }
+                console.log(bytes)
                 return bytes
             }
 
