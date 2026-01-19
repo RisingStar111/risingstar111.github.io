@@ -183,6 +183,7 @@
         <textarea id="levelDataText"></textarea>
         <form method="dialog">
             <button id="loadFromDataButton">Load JSON</button>
+            <button id="saveToImageButton">Save Image</button>
             <button id="loadFromImageButton">Load Image</button>
             <button id="cancelButton">Cancel</button>
         </form>
@@ -253,6 +254,7 @@
             document.getElementById("dataButton").onclick = displayLevelData;
             document.getElementById("optionsButton").onclick = displayOptions;
             document.getElementById("loadFromDataButton").onclick = loadFromData;
+            document.getElementById("saveToImageButton").onclick = saveToImage;
             document.getElementById("loadFromImageButton").onclick = loadFromImage;
             document.getElementById("stepSlider").oninput = onSliderChange;
             document.getElementById("editorSlider").oninput = onSliderChange;
@@ -324,6 +326,16 @@
                 editorBoard = Board.from_serialized(levelText);
                 editorHistory.add_not_seen(editorBoard.clone());
                 onEditorChange(editorHistory.current_step);
+            }
+            async function saveToImage() {
+                // redraw board with nice size
+                drawBoard(editorBoard, 320);
+                // save board to clipboard
+                canvas.toBlob((blob) => {
+                    navigator.clipboard.write([new ClipboardItem({[blob.type]: blob})]);
+                });
+                // redraw normal board scale
+                drawBoard(editorBoard);
             }
             async function loadFromImage() { // what even is error handling
                 const clipboardContents = await navigator.clipboard.read();
