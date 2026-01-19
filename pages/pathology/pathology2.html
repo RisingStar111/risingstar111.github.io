@@ -522,7 +522,6 @@
                     setNextPixel(bytes[i >> 3] >> (i % 8));
                 }
                 ctx.putImageData(image, 0, 0);
-                console.log(bytes)
                 dataFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height).data)
             }
             // no checks for valid data
@@ -549,7 +548,6 @@
                         byte = 0;
                     }
                 }
-                console.log(bytes)
                 return bytes
             }
 
