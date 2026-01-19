@@ -10,9 +10,14 @@
             background-color: rgb(9, 189, 9);
         }
         /* gpt-ed grid selection */
-        gridSelect {
+        blockselect {
             display: grid;
             grid-template-columns: repeat(6, 32px);
+            gap: 5px;
+        }
+        spaceselect {
+            display: grid;
+            grid-template-columns: repeat(3, 32px);
             gap: 5px;
         }
         .sprite {
@@ -60,7 +65,7 @@
             #details {
                 padding: 5px;
                 visibility: hidden;
-                position: absolute;
+                position: fixed;
                 background-color: white;
                 border: 2px solid black;
                 z-index: 1;
@@ -114,20 +119,20 @@
     <div id="buttonControls">
         <div id="editorControls">
             <button id="playButton">Play</button>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr">
-                <div id="sideSelectorContainer" style="display: flex; flex-direction: column; align-items: end;" width="64">
-                    <gridselect style="float: right">
+            <div style="display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center;">
+                <div id="sideSelectorContainer" style="flex: 0; display: flex; flex-direction: column; align-items: center;">
+                    <blockselect style="float: right">
                         <info-popup>Wall<br>Cannot be pushed</info-popup>
                         <info-popup>Basic<br>Can be pushed</info-popup>
                         <info-popup>Ice<br>Slides when pushed</info-popup>
                         <info-popup>Swap<br>Swaps with incoming entities</info-popup>
                         <info-popup>Hole<br>Deletes itself and incoming entities</info-popup>
                         <info-popup>PushSwap<br>Basic for the player<br>Swap for blocks</info-popup>
-                    </gridselect>
+                    </blockselect>
                     <!-- Initialised by 'initisaliseSideSelector' -->
                 </div>
-                <div>
-                    <canvas class="selected" id="blockPreview" style="display: inline" width="64", height="64"></canvas>
+                <div style="flex: 0 0 max-content; align-items: center;">
+                    <canvas class="selected" id="blockPreview" style="display: inline" width="64" height="64"></canvas>
                     <br>
                     <input type="checkbox" id="clearPlacement">
                     <label for="clearPlacement">Remove blocks</label>
@@ -143,17 +148,17 @@
                     <br>
                     <button id="dataButton">Level Data</button>
                 </div>
-                <div style="display: flex; flex-direction: column; align-items: start;">
-                    <gridselect style="float: left">
+                <div style="flex: 0; display: flex; flex-direction: column; align-items: center;">
+                    <spaceselect style="float: left">
                         <info-popup>None<br>Empty space</info-popup>
                         <info-popup>Goal<br>Get the player here to win<br>[Winning not implemented]</info-popup>
                         <info-popup>Player<br>Can only have one<br>Cannot overlap a block</info-popup>
-                    </gridselect>
-                    <gridSelect id="spaceSelection" style="float: left">
+                    </spaceselect>
+                    <spaceselect id="spaceSelection" style="float: left">
                         <div class="sprite static" data-id="emptySpace"></div>
                         <div class="sprite static" data-id="goalSpace"></div>
                         <div class="sprite static" data-id="playerTile"></div>
-                    </gridSelect>
+                    </spaceselect>
                 </div>
             </div>
         </div>
@@ -543,14 +548,14 @@
                 // insert grid elements per side
                 const sides = ["top", "left", "right", "bottom"];
                 innerHtml += sides.map((side) => {
-                        return `<gridSelect id="${side}SideSelection" style="float: right">
+                        return `<blockselect id="${side}SideSelection" style="float: right">
                             <canvas width="32" height="32" class="sprite" data-id="wallSide"></canvas>
                             <canvas width="32" height="32" class="sprite selected" data-id="basicSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="iceSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="swapSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="holeSide"></canvas>
                             <canvas width="32" height="32" class="sprite" data-id="pushSwapSide"></canvas>
-                        </gridSelect>`
+                        </blockselect>`
                     })
                     .join('');
                 // set page html
@@ -842,12 +847,40 @@
             "info-popup",
             class extends HTMLElement {
                 constructor() {
-                super();
-                let template = document.getElementById("infopopup-template");
-                let templateContent = template.content;
+                    super();
+                    let template = document.getElementById("infopopup-template");
+                    let templateContent = template.content;
 
-                const shadowRoot = this.attachShadow({ mode: "open" });
-                shadowRoot.appendChild(document.importNode(templateContent, true));
+                    this.attachShadow({ mode: "open" });
+                    this.shadowRoot.appendChild(document.importNode(templateContent, true));
+                }
+
+                // gpt
+                connectedCallback() {
+                    const details = this.shadowRoot.querySelector("#details");
+                    const preview = this.shadowRoot.querySelector("#preview");
+                    preview.addEventListener('pointerenter', () => { requestAnimationFrame(() => {
+                        const hostRect = this.getBoundingClientRect();
+                        const rect = details.getBoundingClientRect();
+                        
+                        let left = hostRect.left;
+                        let top = hostRect.bottom;
+                        
+                        if (left + rect.width > window.innerWidth) {
+                            left = window.innerWidth - rect.width;
+                        }
+                        
+                        if (rect.left < 0) {
+                            left = 0;
+                        }
+
+                        if (top + rect.height > window.innerHeight) {
+                            top = window.innerHeight - rect.height;
+                        }
+
+                        details.style.left = `${left}px`;
+                        details.style.top = `${top}px`;
+                        })});
                 }
             });
     </script>
