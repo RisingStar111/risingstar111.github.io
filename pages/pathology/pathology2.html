@@ -873,20 +873,8 @@
                         const hostRect = this.getBoundingClientRect();
                         const rect = details.getBoundingClientRect();
                         
-                        let left = hostRect.left;
-                        let top = hostRect.bottom;
-                        
-                        if (left + rect.width > window.innerWidth) {
-                            left = window.innerWidth - rect.width;
-                        }
-                        
-                        if (rect.left < 0) {
-                            left = 0;
-                        }
-
-                        if (top + rect.height > window.innerHeight) {
-                            top = window.innerHeight - rect.height;
-                        }
+                        const left = Math.max(0, Math.min(hostRect.left, window.innerWidth - rect.width));
+                        const top = Math.max(0, Math.min(hostRect.bottom, window.innerHeight - rect.height));
 
                         details.style.left = `${left}px`;
                         details.style.top = `${top}px`;
