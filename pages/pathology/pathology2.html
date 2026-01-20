@@ -208,650 +208,468 @@
     </dialog>
 
     <script type="module">
-        import init, { Board, Block, Direction, Space, BoardHistory } from './pkg/hello_wasm.js';
+        import {Level, Direction, Block} from './board.js'
+        
+        // interfaces(?) for the rust board, with associated static helpers
+        let editorLevel = new Level();
+        let playLevel; // created from editorLevel when transferring to play mode
+        // editor control data
+        // top, right, bottom, left
+        // definitely sacrifices some clarity but i like list manipulation what can i say
+        let selectedSides = ["basicSide", "basicSide", "basicSide", "basicSide"];
+        let space = "emptySpace";
+        let placeLayer = "block";
+        let playing = false;
+        // toggle state getters // the return value does change, but the function is const
+        const clearPlacement = () => document.getElementById("clearPlacement").checked;
+        const fullWall = () => document.getElementById("fullWalls").checked;
+        const gridOutlines = () => document.getElementById("gridOutlines").checked;
+        const touchControlMode = () => document.getElementById("touchControlMode").value;
+        // mouse control data
+        let lastMouseHoverIndex = null;
+        let deltaMouseX = null;
+        let deltaMouseY = null;
+        let lastMouseX = null;
+        let lastMouseY = null;
 
-        async function run() {
-            // Initialise the wasm - loads into memory but functions are only available while in this scope
-            await init();
-
-            // create wasm boards and handlers
-            let editorBoard = newBoard(5, 5);
-            let editorHistory = BoardHistory.from_board(editorBoard.clone());
-            let playHistory = null;
-            // top, right, bottom, left
-            // definitely sacrifices some clarity but i like list manipulation what can i say
-            let selectedSides = ["basicSide", "basicSide", "basicSide", "basicSide"];
-            let space = "emptySpace";
-            let placeLayer = "block";
-            let clearPlacement = () => document.getElementById("clearPlacement").checked;
-            let playing = false;
-            let fullWall = () => document.getElementById("fullWalls").checked;
-            let gridOutlines = () => document.getElementById("gridOutlines").checked;
-            let touchControlMode = () => document.getElementById("touchControlMode").value;
-            let lastMouseHoverIndex = -1;
-            let deltaMouseX = -1;
-            let deltaMouseY = -1;
-            let lastMouseX = -1;
-            let lastMouseY = -1;
-
-            const previewCanvas = document.getElementById("blockPreview");
-            const previewCtx = previewCanvas.getContext("2d");
-            previewCtx.imageSmoothingEnabled = false;
-
-            // set up the editor canvas buttons
-
-            // Set up button callbacks
-            // functions within this module but outside the function are fair game
-            document.getElementById("moveUpButton").onclick = () => moveHandler(Direction.Up);
-            document.getElementById("moveDownButton").onclick = () => moveHandler(Direction.Down);
-            document.getElementById("moveLeftButton").onclick = () => moveHandler(Direction.Left);
-            document.getElementById("moveRightButton").onclick = () => moveHandler(Direction.Right);
-            document.getElementById("restartButton").onclick = restartLevel;
-            document.getElementById("undoButton").onclick = undoStep;
-            document.getElementById("playButton").onclick = playLevel;
-            document.getElementById("editButton").onclick = editLevel;
-            document.getElementById("resizeButton").onclick = resizeLevel;
-            document.getElementById("dataButton").onclick = displayLevelData;
-            document.getElementById("optionsButton").onclick = displayOptions;
-            document.getElementById("loadFromDataButton").onclick = loadFromData;
-            document.getElementById("saveToImageButton").onclick = saveToImage;
-            document.getElementById("loadFromImageButton").onclick = loadFromImage;
-            document.getElementById("stepSlider").oninput = onSliderChange;
-            document.getElementById("editorSlider").oninput = onSliderChange;
-            document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard(playing ? playHistory.get_current_board() : editorBoard)};
-            document.getElementById("gridOutlines").onclick = () => {drawBoard(playing ? playHistory.get_current_board() : editorBoard)};
-            document.getElementById("addTop").onclick = () => add_side("top");
-            document.getElementById("subTop").onclick = () => remove_side("top");
-            document.getElementById("addLeft").onclick = () => add_side("left");
-            document.getElementById("subLeft").onclick = () => remove_side("left");
-            document.getElementById("addRight").onclick = () => add_side("right");
-            document.getElementById("subRight").onclick = () => remove_side("right");
-            document.getElementById("addBottom").onclick = () => add_side("bottom");
-            document.getElementById("subBottom").onclick = () => remove_side("bottom");
-
-            function add_side(side) {
-                if (side == "top") {editorBoard.add_side_top()}
-                if (side == "left") {editorBoard.add_side_left()}
-                if (side == "right") {editorBoard.add_side_right()}
-                if (side == "bottom") {editorBoard.add_side_bottom()}
-                editorHistory.add_not_seen(editorBoard.clone());
-                onEditorChange(editorHistory.current_step);
-            }
-            function remove_side(side) {
-                if (side == "top") {editorBoard.remove_side_top()}
-                if (side == "left") {editorBoard.remove_side_left()}
-                if (side == "right") {editorBoard.remove_side_right()}
-                if (side == "bottom") {editorBoard.remove_side_bottom()}
-                editorHistory.add_not_seen(editorBoard.clone());
-                onEditorChange(editorHistory.current_step);
-            }
-
-            function onSliderChange() {
-                if (playing) {
-                    onStepChange(document.getElementById("stepSlider").value);
-                } else {
-                    onEditorChange(document.getElementById("editorSlider").value);
-                }
-            }
-            function onStepChange(new_step) {
-                document.getElementById("stepSlider").max = playHistory.get_history_length() - 1;
-                document.getElementById("stepSlider").value = new_step;
-                document.getElementById("stepCountText").innerHTML = `Steps: ${new_step}`;
-                playHistory.current_step = new_step;
-                drawBoard(playHistory.get_current_board());
-            }
-            function onEditorChange(new_step) {
-                document.getElementById("editorSlider").max = editorHistory.get_history_length() - 1;
-                document.getElementById("editorSlider").value = new_step;
-                editorHistory.current_step = new_step;
-                editorBoard = editorHistory.get_current_board();
-                document.getElementById("width").value = editorHistory.get_current_board().get_width();
-                document.getElementById("height").value = editorHistory.get_current_board().get_height();
-                drawBoard(editorHistory.get_current_board());
-            }
-
-            function displayOptions() {
-                document.getElementById("optionsDialog").showModal();
-            }
-            function displayLevelData() {
-                document.getElementById("levelDataDialog").showModal();
-                const levelTextArea = document.getElementById("levelDataText");
-                const currentLevelData = editorBoard.serialize();
-                levelTextArea.value = currentLevelData;
-                levelTextArea.focus();
-                levelTextArea.select();
-            }
-            function loadFromData() {
-                const levelText = document.getElementById("levelDataText").value;
-                editorBoard = Board.from_serialized(levelText);
-                editorHistory.add_not_seen(editorBoard.clone());
-                onEditorChange(editorHistory.current_step);
-            }
-            async function saveToImage() {
-                // redraw board with nice size
-                drawBoard(editorBoard, 320);
-                // save board to clipboard
-                canvas.toBlob((blob) => {
-                    navigator.clipboard.write([new ClipboardItem({[blob.type]: blob})]);
-                });
-                // redraw normal board scale
-                drawBoard(editorBoard);
-            }
-            async function loadFromImage() { // what even is error handling
-                const clipboardContents = await navigator.clipboard.read();
-                for (const item of clipboardContents) {
-                    for (const mimeType of item.types) {
-                        if (mimeType === "image/png") {
-                            const pngImage = new Image();
-                            const blob = await item.getType("image/png");
-                            pngImage.onload = () => {
-                                canvas.setAttribute("width", pngImage.width);
-                                canvas.setAttribute("height", pngImage.height);
-                                ctx.drawImage(pngImage, 0, 0);
-                                URL.revokeObjectURL(pngImage.src);
-                                editorBoard = Board.from_serialized_bytes(dataFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height).data));
-                                editorHistory.add_not_seen(editorBoard.clone());
-                                onEditorChange(editorHistory.current_step);
-                            }
-                            pngImage.src = URL.createObjectURL(blob);
-                        }
-                    }
-                }
-            }
-
-            function resizeLevel() {
-                const newWidth = parseInt(document.getElementById("width").value);
-                const newHeight = parseInt(document.getElementById("height").value);
-
-                editorBoard = newBoard(newWidth, newHeight);
-                editorHistory.add_not_seen(editorBoard.clone());
-                onEditorChange(editorHistory.current_step);
-            }
-            function restartLevel() {
-                playHistory.current_step = 0;
-                drawBoard(playHistory.get_current_board());
-            }
-
-            function playLevel() {
-                if (editorBoard.get_player() >= editorBoard.get_width() * editorBoard.get_height()) {
-                    // player has been removed probably by resizing // underflow is active and player is a usize
-                    window.prompt("Level must have a player");
-                    return
-                }
-                document.getElementById("playControls").style.display = "block";
-                document.getElementById("editorControls").style.display = "none";
-                document.querySelectorAll(".resizeButton").forEach(element => {
-                    element.style.display = "none";
-                });
-
-                playHistory = BoardHistory.from_board(editorBoard.clone());
-                onStepChange(0);
-                restartLevel();
-                playing = true;
-            }
-            function editLevel() {
-                document.getElementById("playControls").style.display = "none";
-                document.getElementById("editorControls").style.display = "block";
-                document.querySelectorAll(".resizeButton").forEach(element => {
-                    element.style.display = "inline-block";
-                });
-
-                drawBoard(editorBoard);
-                playing = false;
-            }
-            function newBoard(width, height) {
-                return Board.default(width, height)
-            }
-
-            function undoStep() {
-                if (playing) {
-                    if (playHistory.current_step > 0) {
-                        onStepChange(playHistory.current_step - 1);
-                    }
-                } else {
-                    if (editorHistory.current_step > 0) {
-                        onEditorChange(editorHistory.current_step - 1);
-                    }
-                }
-            }
-
-            function drawBlockPreview() {
-                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height)
-                if (fullWall() && arrayEqual(selectedSides, ["wallSide", "wallSide", "wallSide", "wallSide"])) {
-                    // draw special fullblock wall
-                    drawSpace("wallTile", [0, 0], 1, 1, previewCtx, previewCanvas);
-                    return;
-                }
-                drawBlock(selectedSides, [0, 0], 1, 1, previewCtx, previewCanvas);
-            }
-            function drawBoard(board, forcedSize = null) {
-                let baseSide;
-                if (forcedSize != null) {
-                    baseSide = forcedSize;
-                } else {
-                    // allow page formatting to resize the grid to fit
-                    const gridContainer = document.getElementById("canvasContainer");
-                    gridContainer.style.gridTemplateColumns = '50px minmax(0px, 1fr) 50px';
-                    gridContainer.style.gridTemplateRows = '50px minmax(0px, 1fr) 50px';
-                    // make canvas view big to force grid to ?
-                    canvas.width = 1000;
-                    canvas.height = 1000;
-                    // force reflow and get pixel track sizes
-                    const gridSizes = window.getComputedStyle(gridContainer).grid.split(" ");
-                    // force a maximum size of 320px
-                    const canvasWidth = Math.min(320, parseInt(gridSizes[5]));
-                    const canvasHeight = Math.min(320, parseInt(gridSizes[1]));
-                    // set the grid to scale to the content
-                    gridContainer.style.gridTemplateColumns = '50px auto 50px';
-                    gridContainer.style.gridTemplateRows = '50px auto 50px';
-                    // set the base side to go through squareification
-                    baseSide = Math.min(canvasWidth, canvasHeight);
-                }
-                // resize canvas to a square ratio
-                let ratio = board.get_width() / board.get_height();
-                if (ratio > 1) {
-                    // shrink height
-                    canvas.setAttribute("width",  baseSide);
-                    canvas.setAttribute("height",  baseSide / ratio);
-                } else {
-                    // shrink width
-                    canvas.setAttribute("width", ratio * baseSide);
-                    canvas.setAttribute("height",  baseSide);
-                }
-                // reset image smoothing to false because changing dimensions resets entire canvas
-                ctx.imageSmoothingEnabled=false;
-
-                let highlights = [];
-                if (playing && touchControlMode() == "tapMove") {
-                    highlights = board.indices_on_path_to_index(lastMouseHoverIndex);
-                }
-
-                const width = board.get_width();
-                const height = board.get_height();
-                for (let x = 0; x < width; x++) {
-                    for (let y = 0; y < height; y++) {
-                        const index = x + y * width;
-                        const block = board.get_block_trbl(index);
-                        const space = board.get_space(index);
-                        drawSpace(space, [x, y], width, height, ctx, canvas);
-                        if (gridOutlines()) {
-                            drawSpace("gridOutline", [x, y], width, height, ctx, canvas);
-                        }
-                        if (playing && touchControlMode() == "tapMove") { // better place to put this but haven't worked out everyhow i want highlights
-                            if (highlights.includes(x + y*width)) {
-                                drawSpace("spaceHighlight", [x, y], width, height, ctx, canvas);
-                            }
-                        }
-                        if (block != null) {
-                            // todo don't reuse
-                            if (fullWall() && arrayEqual(block, ["wallSide", "wallSide", "wallSide", "wallSide"])) {
-                                // draw special fullblock wall
-                                drawSpace("wallTile", [x, y], width, height, ctx, canvas);
-                                continue;
-                            }
-                            drawBlock(block, [x, y], width, height, ctx, canvas);
-                        }
-                    }
-                }
-                const playerIndex = board.get_player();
-                drawSpace("playerTile", [playerIndex % width, (playerIndex - (playerIndex % width)) / width], width, height, ctx, canvas)
-
-                drawData(board.serialize_bytes());
-            }
-
-            // no checks for if the data will fit
-            function drawData(bytes) { //todo make this not bad // better but still don't like it
-                let image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                let data = image.data;
-                // IMPORTANT alpha channel gets reset to 255 on render so must be skipped
-                // llm suggestion to extract pixel management into a function
-                let p = 0;
-                const setNextPixel = (v) => {
-                    data[p] = (data[p] & ~0b11) | (v & 0b11);
-                    // next rgb, skipping alpha (4th channel)
-                    p++;
-                    if (p % 4 == 3) {p++}
-                }
-                // first add bottom 16 bits of length (bytes is a Uint8Array, so is unextendable)
-                // compiler unlikely to unroll this but not expensive
-                for (let i = 0; i < 2 * 8; i += 2) {
-                    setNextPixel(bytes.length >> i);
-                }
-                // pack bytes into bottom 2 bits of rgb of pixels
-                for (let i = 0; i < bytes.length * 8; i += 2) {
-                    setNextPixel(bytes[i >> 3] >> (i % 8));
-                }
-                ctx.putImageData(image, 0, 0);
-                dataFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height).data)
-            }
-            // no checks for valid data
-            function dataFromImageData(data) {
-                let bytes = [];
-                let numBytes = 0;
-                let p = 0;
-                const getNextBits = () => {
-                    const o = data[p] & 0b11;
-                    p++;
-                    if (p % 4 == 3) {p++}
-                    return o;
-                }
-                // get number of bytes from first 16 bits
-                for (let i = 0; i < 2 * 8; i += 2) {
-                    numBytes |= getNextBits() << i;
-                }
-                // read bytedata
-                let byte = 0;
-                for (let i = 0; i < numBytes * 8; i += 2) {
-                    byte |= getNextBits() << (i % 8);
-                    if (i % 8 == 6) {
-                        bytes.push(byte);
-                        byte = 0;
-                    }
-                }
-                return bytes
-            }
-
-            // Initialise side selector
-            {
-                // insert side names
-                let innerHtml = document.getElementById("sideSelectorContainer").innerHTML;
-                // insert grid elements per side
-                const sides = ["top", "left", "right", "bottom"];
-                innerHtml += sides.map((side) => {
-                        return `<blockselect id="${side}SideSelection" style="float: right">
-                            <canvas width="32" height="32" class="sprite" data-id="wallSide"></canvas>
-                            <canvas width="32" height="32" class="sprite selected" data-id="basicSide"></canvas>
-                            <canvas width="32" height="32" class="sprite" data-id="iceSide"></canvas>
-                            <canvas width="32" height="32" class="sprite" data-id="swapSide"></canvas>
-                            <canvas width="32" height="32" class="sprite" data-id="holeSide"></canvas>
-                            <canvas width="32" height="32" class="sprite" data-id="pushSwapSide"></canvas>
-                        </blockselect>`
-                    })
-                    .join('');
-                // set page html
-                document.getElementById("sideSelectorContainer").innerHTML = innerHtml;
-
-                // for each side selector
-                for (let i = 0; i < 4; i++) {
-                    // add unique selection callback
-                    const side = sides[i];
-                    const selector = document.getElementById(`${side}SideSelection`);
-                    selector.addEventListener('click', (e) => {
-                        const item = e.target.closest(".sprite");
-                        if (!item) return;
-
-                        // Remove previous selection
-                        selector.querySelector(".selected").classList.remove("selected");
-
-                        // Select the clicked one
-                        item.classList.add("selected");
-
-                        // Set global side variable
-                        selectedSides[i] = item.dataset.id;
-
-                        // Redraw preview
-                        drawBlockPreview();
-                    });
-                    // blit rotated side sprite
-                    selector.querySelectorAll(".sprite")
-                        .forEach((item) => {
-                            const itemCtx = item.getContext('2d');
-                            drawTile(sideOffsets[item.dataset.id], 0, [0, 0], i*Math.PI/2, 1, 1, itemCtx, item);
-                        });
-                }
-            } // end initialise side selector
-
-            function assignSide(gridElement, event) { // still gpt-ed
-                const item = event.target.closest(".sprite");
-                if (!item) return;
-
-                // Remove previous selection
-                gridElement.querySelectorAll(".sprite.selected")
-                        .forEach(el => el.classList.remove("selected"));
-
-                // Select the clicked one
-                item.classList.add("selected");
-
-                // Emit selection
-                return item.dataset.id;
-            }
-
-            const spaceSelection = document.getElementById("spaceSelection");
-            spaceSelection.addEventListener('click', (e) => {
-                space = assignSide(spaceSelection, e);
-                placeLayer = "space";
-                document.getElementById("blockPreview").classList.remove("selected")})
-            const blockPreview = document.getElementById("blockPreview");
-            blockPreview.addEventListener('click', (e) => {
-                placeLayer = "block";
-                blockPreview.classList.add("selected");
-                spaceSelection.querySelectorAll(".sprite.selected").forEach(el => el.classList.remove("selected"));})
-
-            function moveHandler(direction) {
-                playHistory.step(direction);
-                onStepChange(playHistory.current_step);
-            }
-            
-            document.addEventListener('keydown', function (event) {
-                // stackoverflow moment
-                const direction = {
-                    "ArrowLeft"  : Direction.Left,
-                    "ArrowRight" : Direction.Right,
-                    "ArrowUp"    : Direction.Up,
-                    "ArrowDown"  : Direction.Down,
-                    "KeyW"       : Direction.Up,
-                    "KeyA"       : Direction.Left,
-                    "KeyS"       : Direction.Down,
-                    "KeyD"       : Direction.Right,
-                }[event.code];
-                if (playing) {
-                    if (direction !== undefined) {
-                        moveHandler(direction);
-                    }
-
-                    if (event.code == "KeyR") {
-                        restartLevel();
-                    }
-
-                }
-                if (event.code == "KeyZ") {
-                    undoStep();
-                }
-            });
-
-            document.getElementById("canvas").addEventListener('pointerdown', (e) => {
-                if (playing) {
-                    deltaMouseX = 0;
-                    deltaMouseY = 0;
-                    lastMouseX = e.clientX;
-                    lastMouseY = e.clientY;
-                }
-            })
-            document.getElementById("canvas").addEventListener('pointerup', (e) => {
-                if (playing) {
-                    deltaMouseX = null;
-                    deltaMouseY = null;
-                    lastMouseX = e.clientX;
-                    lastMouseY = e.clientY;
-                }
-            })
-            document.getElementById("canvas").addEventListener('pointermove', (e) => {
-                if (playing) {
-                    const rect = canvas.getBoundingClientRect();
-                    const clickX = (e.clientX - rect.left) / canvas.width;
-                    const clickY = (e.clientY - rect.top) / canvas.height;
-                    const mouseIndex = editorBoard.get_index(clickX, clickY);
-                    if (mouseIndex != lastMouseHoverIndex) {
-                        lastMouseHoverIndex = mouseIndex;
-                        drawBoard(playHistory.get_current_board());
-                    }
-                    if (deltaMouseX !== null) {
-                        deltaMouseX += e.clientX - lastMouseX;
-                        deltaMouseY += e.clientY - lastMouseY;
-                        lastMouseX = e.clientX;
-                        lastMouseY = e.clientY;
-                        if (touchControlMode() == "swipeMove") {
-                            if (Math.abs(deltaMouseX) > 128) {
-                                if (deltaMouseX < 0) {
-                                    moveHandler(Direction.Left);
-                                } else {
-                                    moveHandler(Direction.Right);
-                                }
-                                deltaMouseX = null;
-                                deltaMouseY = null;
-                            }
-                            if (Math.abs(deltaMouseY) > 128) {
-                                if (deltaMouseY < 0) {
-                                    moveHandler(Direction.Up);
-                                } else {
-                                    moveHandler(Direction.Down);
-                                }
-                                deltaMouseX = null;
-                                deltaMouseY = null;
-                            }
-                        } else if (touchControlMode() == "dragMove") {
-                            if (Math.abs(deltaMouseX) > 64) {
-                                if (deltaMouseX < 0) {
-                                    moveHandler(Direction.Left);
-                                } else {
-                                    moveHandler(Direction.Right);
-                                }
-                                deltaMouseX = 0;
-                            }
-                            if (Math.abs(deltaMouseY) > 64) {
-                                if (deltaMouseY < 0) {
-                                    moveHandler(Direction.Up);
-                                } else {
-                                    moveHandler(Direction.Down);
-                                }
-                                deltaMouseY = 0;
-                            }
-                        }
-                    }
-                }
-            })
-            document.getElementById("canvas").addEventListener('mouseleave', (e) => {
-                if (playing) {
-                    lastMouseHoverIndex = -1;
-                    drawBoard(playHistory.get_current_board());
-                }
-            })
-            document.getElementById("canvas").addEventListener('click', (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const clickX = (e.clientX - rect.left) / canvas.width;
-                const clickY = (e.clientY - rect.top) / canvas.height;
-                const clickIndex = editorBoard.get_index(clickX, clickY);
-                if (!playing) {
-                    if (e.ctrlKey) {
-                        // copy block at click
-                        const clickedBlock = editorBoard.get_block_trbl(clickIndex);
-                        if (clickedBlock != null) {
-                            selectedSides = clickedBlock;
-                            drawBlockPreview();
-                        }
-                    }
-                    else {
-                        if (placeLayer == "block") {
-                            editorBoard.set_block(clickIndex, clearPlacement() ? null : Block.from_trbl(selectedSides[0], selectedSides[1], selectedSides[2], selectedSides[3]));
-                        } else if (placeLayer == "space") {
-                            if (space == "playerTile") {
-                                editorBoard.set_block(clickIndex, null);
-                                editorBoard.set_player(clickIndex);
-                            } else {
-                                switch (space) {
-                                    case "emptySpace":
-                                        editorBoard.set_space(clickIndex, Space.Empty);
-                                        break;
-                                    case "goalSpace":
-                                        editorBoard.set_space(clickIndex, Space.Goal);
-                                        break;
-                                
-                                    default:
-                                        break;
-                                }
-                            }
-                        }
-                        editorHistory.add_not_seen(editorBoard.clone());
-                        onEditorChange(editorHistory.current_step);
-                    }
-                // playing
-                } else {
-                    if (touchControlMode() == "tapMove") {
-                        playHistory.move_to_index(clickIndex);
-                        onStepChange(playHistory.current_step);
-                    }
-                }
-            });
-
-            drawBlockPreview();
-            drawBoard(editorBoard);
-        }
-
+        // canvas for rendering the level, both for edit mode and play mode
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         ctx.imageSmoothingEnabled = false;
+        // canvas for previewing currently constructed block
+        const previewCanvas = document.getElementById("blockPreview");
+        const previewCtx = previewCanvas.getContext("2d");
+        previewCtx.imageSmoothingEnabled = false;
 
-        const modularImg = new Image();
-        modularImg.src = "sprites/modular.png";
+        // Set up button callbacks
+        // global controls
+        document.getElementById("optionsButton").onclick = displayOptions;
+        document.getElementById("gridOutlines").onclick = drawBoard;
+        document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard()};
+        // play mode controls
+        document.getElementById("moveUpButton").onclick = () => moveHandler(Direction.Up);
+        document.getElementById("moveDownButton").onclick = () => moveHandler(Direction.Down);
+        document.getElementById("moveLeftButton").onclick = () => moveHandler(Direction.Left);
+        document.getElementById("moveRightButton").onclick = () => moveHandler(Direction.Right);
+        document.getElementById("restartButton").onclick = restartLevel;
+        document.getElementById("undoButton").onclick = undoStep;
+        document.getElementById("editButton").onclick = editLevel;
+        document.getElementById("stepSlider").oninput = onSliderChange;
+        // edit mode controls
+        document.getElementById("playButton").onclick = goPlayLevel;
+        document.getElementById("resizeButton").onclick = resizeLevel;
+        document.getElementById("editorSlider").oninput = onSliderChange;
+        document.getElementById("dataButton").onclick = displayLevelData;
+        document.getElementById("loadFromDataButton").onclick = loadFromData;
+        document.getElementById("saveToImageButton").onclick = saveToImage;
+        document.getElementById("loadFromImageButton").onclick = loadFromImage;
+        // board resizers
+        document.getElementById("addTop").onclick = () => add_side("top");
+        document.getElementById("subTop").onclick = () => remove_side("top");
+        document.getElementById("addLeft").onclick = () => add_side("left");
+        document.getElementById("subLeft").onclick = () => remove_side("left");
+        document.getElementById("addRight").onclick = () => add_side("right");
+        document.getElementById("subRight").onclick = () => remove_side("right");
+        document.getElementById("addBottom").onclick = () => add_side("bottom");
+        document.getElementById("subBottom").onclick = () => remove_side("bottom");
+
+        function activeLevel() {
+            return playing ? playLevel : editorLevel;
+        }
+
+        function drawBoard() {
+            // allow page formatting to resize the grid to fit
+            const gridContainer = document.getElementById("canvasContainer");
+            gridContainer.style.gridTemplateColumns = '50px minmax(0px, 1fr) 50px';
+            gridContainer.style.gridTemplateRows = '50px minmax(0px, 1fr) 50px';
+            // make canvas view big to force grid to ?
+            canvas.width = 1000;
+            canvas.height = 1000;
+            // force reflow and get pixel track sizes
+            const gridSizes = window.getComputedStyle(gridContainer).grid.split(" ");
+            // force a maximum size of 320px
+            canvas.width = Math.min(320, parseInt(gridSizes[5]));
+            canvas.height = Math.min(320, parseInt(gridSizes[1]));
+            // set the grid to scale to the content
+            gridContainer.style.gridTemplateColumns = '50px auto 50px';
+            gridContainer.style.gridTemplateRows = '50px auto 50px';
+
+            (activeLevel()).drawToCanvas(canvas, ctx, gridOutlines(), fullWall());
+
+            if (playing && touchControlMode() == "tapMove" && lastMouseHoverIndex !== null) {
+                let highlights = playLevel.board.indices_on_path_to_index(lastMouseHoverIndex);
+                playLevel.drawHighlights(highlights, canvas, ctx);
+            }
+        }
+
+        function moveHandler(direction) {
+            playLevel.moveHandler(direction);
+            onStepChange(playLevel.history.current_step);
+        }
+
+        function add_side(side) {
+            editorLevel.add_side(side);
+            onEditorChange(editorLevel.history.current_step);
+        }
+        function remove_side(side) {
+            editorLevel.remove_side(side);
+            onEditorChange(editorLevel.history.current_step);
+        }
+
+        function onSliderChange() {
+            if (playing) {
+                onStepChange(document.getElementById("stepSlider").value);
+            } else {
+                onEditorChange(document.getElementById("editorSlider").value);
+            }
+        }
         
-        const sideOffsets = {
-            "wallSide" : 68,
-            "basicSide" : 0,
-            "iceSide" : 34,
-            "swapSide" : 102,
-            "holeSide" : 136,
-            "pushSwapSide" : 170,
+        function onStepChange(new_step) {
+            document.getElementById("stepSlider").max = playLevel.history.get_history_length() - 1;
+            document.getElementById("stepSlider").value = new_step;
+            document.getElementById("stepCountText").innerHTML = `Steps: ${new_step}`;
+            playLevel.setStep(new_step);
+            drawBoard();
+        }
+        function onEditorChange(new_step) {
+            document.getElementById("editorSlider").max = editorLevel.history.get_history_length() - 1;
+            document.getElementById("editorSlider").value = new_step;
+            editorLevel.setStep(new_step);
+            document.getElementById("width").value = editorLevel.width;
+            document.getElementById("height").value = editorLevel.height;
+            drawBoard();
+        }
+
+        function displayOptions() {
+            document.getElementById("optionsDialog").showModal();
+        }
+        function displayLevelData() {
+            document.getElementById("levelDataDialog").showModal();
+            const levelTextArea = document.getElementById("levelDataText");
+            const currentLevelData = editorLevel.board.serialize();
+            levelTextArea.value = currentLevelData;
+            levelTextArea.focus();
+            levelTextArea.select();
+        }
+        function loadFromData() {
+            const levelText = document.getElementById("levelDataText").value;
+            editorLevel.loadText(levelText);
+            onEditorChange(editorLevel.history.current_step);
+        }
+        async function saveToImage() {
+            const blob = await (activeLevel()).generateDataImageBlob();
+            navigator.clipboard.write([new ClipboardItem({[blob.type]: blob})]);
+        }
+        async function loadFromImage() { // what even is error handling
+            const clipboardContents = await navigator.clipboard.read();
+            for (const item of clipboardContents) {
+                for (const mimeType of item.types) {
+                    if (mimeType === "image/png") {
+                        const pngImage = new Image();
+                        const blob = await item.getType("image/png");
+                        pngImage.onload = () => {
+                            // TODO use offscreenCanvas
+                            canvas.setAttribute("width", pngImage.width);
+                            canvas.setAttribute("height", pngImage.height);
+                            ctx.drawImage(pngImage, 0, 0);
+                            URL.revokeObjectURL(pngImage.src);
+                            editorLevel.loadBinary(Level.dataFromImageData(ctx.getImageData(0, 0, pngImage.width, pngImage.height).data, canvas, ctx));
+                            onEditorChange(editorLevel.history.current_step);
+                        }
+                        pngImage.src = URL.createObjectURL(blob);
+                    }
+                }
             }
-        const spaceOffsets = {
-            "emptySpace" : 0,
-            "goalSpace" : 34,
-            "playerTile" : 68,
-            "wallTile" : 102,
-            "gridOutline" : 136,
-            "spaceHighlight" : 170,
+        }
+
+        function resizeLevel() {
+            const newWidth = parseInt(document.getElementById("width").value);
+            const newHeight = parseInt(document.getElementById("height").value);
+            editorLevel.loadDefault(newWidth, newHeight);
+            onEditorChange(editorLevel.history.current_step);
+        }
+        function restartLevel() {
+            playLevel.history.current_step = 0;
+            drawBoard();
+        }
+
+        function goPlayLevel() {
+            if (editorLevel.board.get_player() >= editorLevel.width * editorLevel.height) {
+                // player has been removed probably by resizing // underflow is active and player is a usize
+                window.prompt("Level must have a player");
+                return
             }
-        function drawBlock(blockSides, gridPos, gridWidth, gridHeight, ctx, canvas) {
+            document.getElementById("playControls").style.display = "block";
+            document.getElementById("editorControls").style.display = "none";
+            document.querySelectorAll(".resizeButton").forEach(element => {
+                element.style.display = "none";
+            });
+
+            playing = true;
+            playLevel = new Level(editorLevel.board.clone());
+            onStepChange(0);
+        }
+        function editLevel() {
+            document.getElementById("playControls").style.display = "none";
+            document.getElementById("editorControls").style.display = "block";
+            document.querySelectorAll(".resizeButton").forEach(element => {
+                element.style.display = "inline-block";
+            });
+
+            playing = false;
+            drawBoard();
+        }
+
+        function undoStep() {
+            if (playing) {
+                if (playLevel.history.current_step > 0) {
+                    onStepChange(playLevel.history.current_step - 1);
+                }
+            } else {
+                if (editorLevel.history.current_step > 0) {
+                    onEditorChange(editorLevel.history.current_step - 1);
+                }
+            }
+        }
+
+        function drawBlockPreview() {
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height)
+            if (fullWall() && selectedSides.every((side) => {return side == "wallSide"})) {
+                Level.drawSpace("wallTile", [0, 0], 1, 1, previewCtx, previewCanvas);
+            } else {
+                Level.drawBlock(selectedSides, [0, 0], 1, 1, previewCtx, previewCanvas);
+            }
+        }
+
+        // Initialise side selector
+        {
+            // insert side names
+            let innerHtml = document.getElementById("sideSelectorContainer").innerHTML;
+            // insert grid elements per side
+            const sides = ["top", "left", "right", "bottom"];
+            innerHtml += sides.map((side) => {
+                    return `<blockselect id="${side}SideSelection" style="float: right">
+                        <canvas width="32" height="32" class="sprite" data-id="wallSide"></canvas>
+                        <canvas width="32" height="32" class="sprite selected" data-id="basicSide"></canvas>
+                        <canvas width="32" height="32" class="sprite" data-id="iceSide"></canvas>
+                        <canvas width="32" height="32" class="sprite" data-id="swapSide"></canvas>
+                        <canvas width="32" height="32" class="sprite" data-id="holeSide"></canvas>
+                        <canvas width="32" height="32" class="sprite" data-id="pushSwapSide"></canvas>
+                    </blockselect>`
+                })
+                .join('');
+            // set page html
+            document.getElementById("sideSelectorContainer").innerHTML = innerHtml;
+
+            // for each side selector
             for (let i = 0; i < 4; i++) {
-                drawTile(sideOffsets[blockSides[i]], 0, gridPos, i*Math.PI/2, gridWidth, gridHeight, ctx, canvas);
+                // add unique selection callback
+                const side = sides[i];
+                const selector = document.getElementById(`${side}SideSelection`);
+                selector.addEventListener('click', (e) => {
+                    const item = e.target.closest(".sprite");
+                    if (!item) return;
+
+                    // Remove previous selection
+                    selector.querySelector(".selected").classList.remove("selected");
+
+                    // Select the clicked one
+                    item.classList.add("selected");
+
+                    // Set global side variable
+                    selectedSides[i] = item.dataset.id;
+
+                    // Redraw preview
+                    drawBlockPreview();
+                });
+                // blit rotated side sprite
+                selector.querySelectorAll(".sprite")
+                    .forEach((item) => {
+                        const itemCtx = item.getContext('2d');
+                        Level.drawTile(Level.sideOffsets[item.dataset.id], 0, [0, 0], i*Math.PI/2, 1, 1, itemCtx, item);
+                    });
             }
-        }
-        function drawSpace(space, gridPos, gridWidth, gridHeight, ctx, canvas) {
-            drawTile(spaceOffsets[space], 34, gridPos, 0, gridWidth, gridHeight, ctx, canvas)
+        } // end initialise side selector
+
+        function assignSide(gridElement, event) { // still gpt-ed
+            const item = event.target.closest(".sprite");
+            if (!item) return;
+
+            // Remove previous selection
+            gridElement.querySelectorAll(".sprite.selected")
+                    .forEach(el => el.classList.remove("selected"));
+
+            // Select the clicked one
+            item.classList.add("selected");
+
+            // Emit selection
+            return item.dataset.id;
         }
 
-        function drawTile(spriteXOffset, spriteYOffset, gridPos, angle, gridWidth, gridHeight, ctx, canvas) {
-            // grid to canvas position
-            const canvasX = gridPos[0] * (canvas.width / gridWidth);
-            const canvasY = gridPos[1] * (canvas.height / gridHeight);
-            const tileWidth = canvas.width / gridWidth;
-            const tileHeight = canvas.height / gridHeight;
-            const spriteSize = 32;
-            // render image from spritesheet
-            ctx.translate(canvasX + tileWidth/2, canvasY + tileHeight/2);
-            ctx.rotate(angle);
-            ctx.translate(-tileWidth/2, -tileHeight/2);
-            ctx.drawImage(modularImg, spriteXOffset, spriteYOffset, spriteSize, spriteSize, 0, 0, tileWidth, tileHeight);
-            ctx.translate(tileWidth/2, tileHeight/2);
-            ctx.rotate(-angle);
-            ctx.translate(-canvasX - tileWidth/2, -canvasY - tileHeight/2);
-        }
+        const spaceSelection = document.getElementById("spaceSelection");
+        spaceSelection.addEventListener('click', (e) => {
+            space = assignSide(spaceSelection, e);
+            placeLayer = "space";
+            document.getElementById("blockPreview").classList.remove("selected")})
+        const blockPreview = document.getElementById("blockPreview");
+        blockPreview.addEventListener('click', (e) => {
+            placeLayer = "block";
+            blockPreview.classList.add("selected");
+            spaceSelection.querySelectorAll(".sprite.selected").forEach(el => el.classList.remove("selected"));})
+            
+        document.addEventListener('keydown', function (event) {
+            // stackoverflow moment
+            const direction = {
+                "ArrowLeft"  : Direction.Left,
+                "ArrowRight" : Direction.Right,
+                "ArrowUp"    : Direction.Up,
+                "ArrowDown"  : Direction.Down,
+                "KeyW"       : Direction.Up,
+                "KeyA"       : Direction.Left,
+                "KeyS"       : Direction.Down,
+                "KeyD"       : Direction.Right,
+            }[event.code];
+            if (playing) {
+                if (direction !== undefined) {
+                    moveHandler(direction);
+                }
 
-        // doesn't work on nested items
-        // length must be the same - this includes undefined items and having items assigned to 'different indexes' since js arrays are fake
-        function arrayEqual(arrayLeft, arrayRight) {
-            if (arrayLeft.length != arrayRight.length) { return false }
-            for (let i = 0; i < arrayLeft.length; i++) {
-                if (arrayLeft[i] != arrayRight[i]) { return false }
+                if (event.code == "KeyR") {
+                    restartLevel();
+                }
+
             }
-            return true
-        }
+            if (event.code == "KeyZ") {
+                undoStep();
+            }
+        });
 
-        // make sure the initial draw events work
-        if (modularImg.complete) {
-            run();
-        } else {
-            modularImg.onload = run;
-        }
+        document.getElementById("canvas").addEventListener('pointerdown', (e) => {
+            if (playing) {
+                deltaMouseX = 0;
+                deltaMouseY = 0;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        })
+        document.getElementById("canvas").addEventListener('pointerup', (e) => {
+            if (playing) {
+                deltaMouseX = null;
+                deltaMouseY = null;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        })
+        document.getElementById("canvas").addEventListener('pointermove', (e) => {
+            if (playing) {
+                // TODO (make better this is bad code)
+                const rect = canvas.getBoundingClientRect();
+                const clickX = (e.clientX - rect.left) / canvas.width;
+                const clickY = (e.clientY - rect.top) / canvas.height;
+                const mouseIndex = editorLevel.board.get_index(clickX, clickY);
+                if (mouseIndex != lastMouseHoverIndex) {
+                    lastMouseHoverIndex = mouseIndex;
+                    drawBoard();
+                }
+                if (deltaMouseX !== null) {
+                    deltaMouseX += e.clientX - lastMouseX;
+                    deltaMouseY += e.clientY - lastMouseY;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                    if (touchControlMode() == "swipeMove") {
+                        if (Math.abs(deltaMouseX) > 128) {
+                            if (deltaMouseX < 0) {
+                                moveHandler(Direction.Left);
+                            } else {
+                                moveHandler(Direction.Right);
+                            }
+                            deltaMouseX = null;
+                            deltaMouseY = null;
+                        }
+                        if (Math.abs(deltaMouseY) > 128) {
+                            if (deltaMouseY < 0) {
+                                moveHandler(Direction.Up);
+                            } else {
+                                moveHandler(Direction.Down);
+                            }
+                            deltaMouseX = null;
+                            deltaMouseY = null;
+                        }
+                    } else if (touchControlMode() == "dragMove") {
+                        if (Math.abs(deltaMouseX) > 64) {
+                            if (deltaMouseX < 0) {
+                                moveHandler(Direction.Left);
+                            } else {
+                                moveHandler(Direction.Right);
+                            }
+                            deltaMouseX = 0;
+                        }
+                        if (Math.abs(deltaMouseY) > 64) {
+                            if (deltaMouseY < 0) {
+                                moveHandler(Direction.Up);
+                            } else {
+                                moveHandler(Direction.Down);
+                            }
+                            deltaMouseY = 0;
+                        }
+                    }
+                }
+            }
+        })
+        document.getElementById("canvas").addEventListener('mouseleave', (e) => {
+            if (playing) {
+                lastMouseHoverIndex = null;
+                drawBoard();
+            }
+        })
+        document.getElementById("canvas").addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) / canvas.width;
+            const clickY = (e.clientY - rect.top) / canvas.height;
+            const clickIndex = editorLevel.board.get_index(clickX, clickY);
+            if (!playing) {
+                if (e.ctrlKey) {
+                    // copy block at click
+                    const clickedBlock = editorLevel.board.get_block_trbl(clickIndex);
+                    if (clickedBlock != null) {
+                        selectedSides = clickedBlock;
+                        drawBlockPreview();
+                    }
+                }
+                else {
+                    // TODO this is patch code atm
+                    let board = editorLevel.board.clone();
+                    if (placeLayer == "block") {
+                        board.set_block(clickIndex, clearPlacement() ? null : Block.from_trbl(selectedSides[0], selectedSides[1], selectedSides[2], selectedSides[3]));
+                    } else if (placeLayer == "space") {
+                        if (space == "playerTile") {
+                            board.set_block(clickIndex, null);
+                            board.set_player(clickIndex);
+                        } else {
+                            switch (space) {
+                                case "emptySpace":
+                                    board.set_space(clickIndex, Space.Empty);
+                                    break;
+                                case "goalSpace":
+                                    board.set_space(clickIndex, Space.Goal);
+                                    break;
+                            
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                    editorLevel.history.add_not_seen(board.clone());
+                    onEditorChange(editorLevel.history.current_step);
+                }
+            // playing
+            } else {
+                if (touchControlMode() == "tapMove") {
+                    playLevel.history.move_to_index(clickIndex);
+                    onStepChange(playLevel.history.current_step);
+                }
+            }
+        });
 
         customElements.define(
             "info-popup",
@@ -881,6 +699,9 @@
                         })});
                 }
             });
+            
+        drawBlockPreview(); // may need to check if modularimg is loaded but that's now in board.js::Level
+        drawBoard();
     </script>
 </body>
 
