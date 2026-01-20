@@ -9,7 +9,7 @@ export class Level {
     history;
     constructor(initialBoard = null) {
         this.history = BoardHistory.from_board(initialBoard == null ? Board.default(5, 5) : initialBoard);
-        this.loadCurrentBoard();
+        this.loadCurrentBoard(true);
     }
 
     moveHandler(direction) {
@@ -17,10 +17,12 @@ export class Level {
         this.loadCurrentBoard();
     }
 
-    loadCurrentBoard() {
+    loadCurrentBoard(suppressCallback = false) {
         this.board = this.history.get_current_board();
         this.width = this.board.get_width();
         this.height = this.board.get_height();
+        if (suppressCallback) return
+        Level.levelChangedCallback();
     }
 
     indexToPosition(index) {
@@ -177,6 +179,10 @@ export class Level {
         let board = Board.default(width, height);
         this.history.add_not_seen(board);
         this.loadCurrentBoard();
+    }
+
+    static levelChangedCallback() {
+
     }
 
     static tileset;

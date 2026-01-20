@@ -213,6 +213,7 @@
         // interfaces(?) for the rust board, with associated static helpers
         let editorLevel = new Level();
         let playLevel; // created from editorLevel when transferring to play mode
+        Level.levelChangedCallback = onLevelChanged;
         // editor control data
         // top, right, bottom, left
         // definitely sacrifices some clarity but i like list manipulation what can i say
@@ -247,10 +248,10 @@
         document.getElementById("gridOutlines").onclick = drawBoard;
         document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard()};
         // play mode controls
-        document.getElementById("moveUpButton").onclick = () => moveHandler(Direction.Up);
-        document.getElementById("moveDownButton").onclick = () => moveHandler(Direction.Down);
-        document.getElementById("moveLeftButton").onclick = () => moveHandler(Direction.Left);
-        document.getElementById("moveRightButton").onclick = () => moveHandler(Direction.Right);
+        document.getElementById("moveUpButton").onclick = () => playLevel.moveHandler(Direction.Up);
+        document.getElementById("moveDownButton").onclick = () => playLevel.moveHandler(Direction.Down);
+        document.getElementById("moveLeftButton").onclick = () => playLevel.moveHandler(Direction.Left);
+        document.getElementById("moveRightButton").onclick = () => playLevel.moveHandler(Direction.Right);
         document.getElementById("restartButton").onclick = restartLevel;
         document.getElementById("undoButton").onclick = undoStep;
         document.getElementById("editButton").onclick = editLevel;
@@ -264,14 +265,14 @@
         document.getElementById("saveToImageButton").onclick = saveToImage;
         document.getElementById("loadFromImageButton").onclick = loadFromImage;
         // board resizers
-        document.getElementById("addTop").onclick = () => add_side("top");
-        document.getElementById("subTop").onclick = () => remove_side("top");
-        document.getElementById("addLeft").onclick = () => add_side("left");
-        document.getElementById("subLeft").onclick = () => remove_side("left");
-        document.getElementById("addRight").onclick = () => add_side("right");
-        document.getElementById("subRight").onclick = () => remove_side("right");
-        document.getElementById("addBottom").onclick = () => add_side("bottom");
-        document.getElementById("subBottom").onclick = () => remove_side("bottom");
+        document.getElementById("addTop").onclick = () => editorLevel.add_side("top");
+        document.getElementById("subTop").onclick = () => editorLevel.remove_side("top");
+        document.getElementById("addLeft").onclick = () => editorLevel.add_side("left");
+        document.getElementById("subLeft").onclick = () => editorLevel.remove_side("left");
+        document.getElementById("addRight").onclick = () => editorLevel.add_side("right");
+        document.getElementById("subRight").onclick = () => editorLevel.remove_side("right");
+        document.getElementById("addBottom").onclick = () => editorLevel.add_side("bottom");
+        document.getElementById("subBottom").onclick = () => editorLevel.remove_side("bottom");
 
         function activeLevel() {
             return playing ? playLevel : editorLevel;
@@ -302,41 +303,28 @@
             }
         }
 
-        function moveHandler(direction) {
-            playLevel.moveHandler(direction);
-            onStepChange(playLevel.history.current_step);
-        }
-
-        function add_side(side) {
-            editorLevel.add_side(side);
-            onEditorChange(editorLevel.history.current_step);
-        }
-        function remove_side(side) {
-            editorLevel.remove_side(side);
-            onEditorChange(editorLevel.history.current_step);
-        }
-
         function onSliderChange() {
-            if (playing) {
-                onStepChange(document.getElementById("stepSlider").value);
+            if (playing) { // TODO coordinate sliders better
+                (activeLevel()).setStep(document.getElementById("stepSlider").value);
             } else {
-                onEditorChange(document.getElementById("editorSlider").value);
+                (activeLevel()).setStep(document.getElementById("editorSlider").value);
             }
         }
-        
-        function onStepChange(new_step) {
-            document.getElementById("stepSlider").max = playLevel.history.get_history_length() - 1;
-            document.getElementById("stepSlider").value = new_step;
-            document.getElementById("stepCountText").innerHTML = `Steps: ${new_step}`;
-            playLevel.setStep(new_step);
-            drawBoard();
-        }
-        function onEditorChange(new_step) {
-            document.getElementById("editorSlider").max = editorLevel.history.get_history_length() - 1;
-            document.getElementById("editorSlider").value = new_step;
-            editorLevel.setStep(new_step);
-            document.getElementById("width").value = editorLevel.width;
-            document.getElementById("height").value = editorLevel.height;
+
+        function onLevelChanged() {
+            const active = activeLevel();
+            const length = active.history.get_history_length() - 1;
+            const current = active.history.current_step;
+            if (playing) {
+                document.getElementById("stepSlider").max = length;
+                document.getElementById("stepSlider").value = current;
+                document.getElementById("stepCountText").innerHTML = `Steps: ${current}`;
+            } else {
+                document.getElementById("editorSlider").max = length;
+                document.getElementById("editorSlider").value = current;
+                document.getElementById("width").value = active.width;
+                document.getElementById("height").value = active.height;
+            }
             drawBoard();
         }
 
@@ -354,7 +342,6 @@
         function loadFromData() {
             const levelText = document.getElementById("levelDataText").value;
             editorLevel.loadText(levelText);
-            onEditorChange(editorLevel.history.current_step);
         }
         async function saveToImage() {
             const blob = await (activeLevel()).generateDataImageBlob();
@@ -374,7 +361,6 @@
                             ctx.drawImage(pngImage, 0, 0);
                             URL.revokeObjectURL(pngImage.src);
                             editorLevel.loadBinary(Level.dataFromImageData(ctx.getImageData(0, 0, pngImage.width, pngImage.height).data, canvas, ctx));
-                            onEditorChange(editorLevel.history.current_step);
                         }
                         pngImage.src = URL.createObjectURL(blob);
                     }
@@ -386,7 +372,6 @@
             const newWidth = parseInt(document.getElementById("width").value);
             const newHeight = parseInt(document.getElementById("height").value);
             editorLevel.loadDefault(newWidth, newHeight);
-            onEditorChange(editorLevel.history.current_step);
         }
         function restartLevel() {
             playLevel.history.current_step = 0;
@@ -407,7 +392,7 @@
 
             playing = true;
             playLevel = new Level(editorLevel.board.clone());
-            onStepChange(0);
+            playLevel.setStep(0);
         }
         function editLevel() {
             document.getElementById("playControls").style.display = "none";
@@ -421,14 +406,9 @@
         }
 
         function undoStep() {
-            if (playing) {
-                if (playLevel.history.current_step > 0) {
-                    onStepChange(playLevel.history.current_step - 1);
-                }
-            } else {
-                if (editorLevel.history.current_step > 0) {
-                    onEditorChange(editorLevel.history.current_step - 1);
-                }
+            const active = activeLevel();
+            if (active.history.current_step > 0) {
+                active.setStep(active.history.current_step - 1);
             }
         }
 
@@ -531,7 +511,7 @@
             }[event.code];
             if (playing) {
                 if (direction !== undefined) {
-                    moveHandler(direction);
+                    playLevel.moveHandler(direction);
                 }
 
                 if (event.code == "KeyR") {
@@ -579,18 +559,18 @@
                     if (touchControlMode() == "swipeMove") {
                         if (Math.abs(deltaMouseX) > 128) {
                             if (deltaMouseX < 0) {
-                                moveHandler(Direction.Left);
+                                playLevel.moveHandler(Direction.Left);
                             } else {
-                                moveHandler(Direction.Right);
+                                playLevel.moveHandler(Direction.Right);
                             }
                             deltaMouseX = null;
                             deltaMouseY = null;
                         }
                         if (Math.abs(deltaMouseY) > 128) {
                             if (deltaMouseY < 0) {
-                                moveHandler(Direction.Up);
+                                playLevel.moveHandler(Direction.Up);
                             } else {
-                                moveHandler(Direction.Down);
+                                playLevel.moveHandler(Direction.Down);
                             }
                             deltaMouseX = null;
                             deltaMouseY = null;
@@ -598,17 +578,17 @@
                     } else if (touchControlMode() == "dragMove") {
                         if (Math.abs(deltaMouseX) > 64) {
                             if (deltaMouseX < 0) {
-                                moveHandler(Direction.Left);
+                                playLevel.moveHandler(Direction.Left);
                             } else {
-                                moveHandler(Direction.Right);
+                                playLevel.moveHandler(Direction.Right);
                             }
                             deltaMouseX = 0;
                         }
                         if (Math.abs(deltaMouseY) > 64) {
                             if (deltaMouseY < 0) {
-                                moveHandler(Direction.Up);
+                                playLevel.moveHandler(Direction.Up);
                             } else {
-                                moveHandler(Direction.Down);
+                                playLevel.moveHandler(Direction.Down);
                             }
                             deltaMouseY = 0;
                         }
@@ -660,13 +640,13 @@
                         }
                     }
                     editorLevel.history.add_not_seen(board.clone());
-                    onEditorChange(editorLevel.history.current_step);
+                    editorLevel.setStep(editorLevel.history.current_step);
                 }
             // playing
             } else {
                 if (touchControlMode() == "tapMove") {
                     playLevel.history.move_to_index(clickIndex);
-                    onStepChange(playLevel.history.current_step);
+                    playLevel.setStep(playLevel.history.current_step);
                 }
             }
         });
