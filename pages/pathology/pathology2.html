@@ -671,14 +671,18 @@
                         const hostRect = this.getBoundingClientRect();
                         const rect = details.getBoundingClientRect();
                         
-                        const left = Math.max(0, Math.min(hostRect.left, window.innerWidth - rect.width));
-                        const top = Math.max(0, Math.min(hostRect.bottom, window.innerHeight - rect.height));
+                        const left = clamp(hostRect.left, 0, window.innerWidth - rect.width);
+                        const top = clamp(hostRect.bottom, 0, window.innerHeight - rect.height);
 
                         details.style.left = `${left}px`;
                         details.style.top = `${top}px`;
                         })});
                 }
             });
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(value, max));
+        }
             
         drawBlockPreview(); // may need to check if modularimg is loaded but that's now in board.js::Level
         drawBoard();
