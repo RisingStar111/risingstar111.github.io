@@ -544,9 +544,9 @@
             if (playing) {
                 // TODO (make better this is bad code)
                 const rect = canvas.getBoundingClientRect();
-                const clickX = (e.clientX - rect.left) / canvas.width;
-                const clickY = (e.clientY - rect.top) / canvas.height;
-                const mouseIndex = editorLevel.board.get_index(clickX, clickY);
+                let clickX = clamp((e.clientX - rect.left) / canvas.width, 0, 0.999);
+                let clickY = clamp((e.clientY - rect.top) / canvas.height, 0, 0.999);
+                const mouseIndex = playLevel.board.get_index(clickX, clickY);
                 if (mouseIndex != lastMouseHoverIndex) {
                     lastMouseHoverIndex = mouseIndex;
                     drawBoard();
@@ -558,38 +558,21 @@
                     lastMouseY = e.clientY;
                     if (touchControlMode() == "swipeMove") {
                         if (Math.abs(deltaMouseX) > 128) {
-                            if (deltaMouseX < 0) {
-                                playLevel.moveHandler(Direction.Left);
-                            } else {
-                                playLevel.moveHandler(Direction.Right);
-                            }
+                            playLevel.moveHandler(deltaMouseX < 0 ? Direction.Left : Direction.Right);
                             deltaMouseX = null;
                             deltaMouseY = null;
-                        }
-                        if (Math.abs(deltaMouseY) > 128) {
-                            if (deltaMouseY < 0) {
-                                playLevel.moveHandler(Direction.Up);
-                            } else {
-                                playLevel.moveHandler(Direction.Down);
-                            }
+                        } else if (Math.abs(deltaMouseY) > 128) {
+                            playLevel.moveHandler(deltaMouseY < 0 ? Direction.Up : Direction.Down);
                             deltaMouseX = null;
                             deltaMouseY = null;
                         }
                     } else if (touchControlMode() == "dragMove") {
                         if (Math.abs(deltaMouseX) > 64) {
-                            if (deltaMouseX < 0) {
-                                playLevel.moveHandler(Direction.Left);
-                            } else {
-                                playLevel.moveHandler(Direction.Right);
-                            }
+                            playLevel.moveHandler(deltaMouseX < 0 ? Direction.Left : Direction.Right);
                             deltaMouseX = 0;
                         }
                         if (Math.abs(deltaMouseY) > 64) {
-                            if (deltaMouseY < 0) {
-                                playLevel.moveHandler(Direction.Up);
-                            } else {
-                                playLevel.moveHandler(Direction.Down);
-                            }
+                            playLevel.moveHandler(deltaMouseY < 0 ? Direction.Up : Direction.Down);
                             deltaMouseY = 0;
                         }
                     }
