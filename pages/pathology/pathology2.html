@@ -227,7 +227,6 @@
         let playing = false;
         // toggle state getters // the return value does change, but the function is const
         const clearPlacement = () => document.getElementById("clearPlacement").checked;
-        const touchControlMode = () => document.getElementById("touchControlMode").value;
         // bind options controls
         // the options script should have been run first as script module => defer
         IOptions.bindToggle(document.getElementById("fullWalls"), 'fillWalls', () => {drawBlockPreview(), drawBoard()});
