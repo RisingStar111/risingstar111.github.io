@@ -1,9 +1,9 @@
 const optionsName = "PathologyOptions";
 
 const MoveMethods = Object.freeze({
-    Tap: 0,
-    Swipe: 1,
-    Drag: 2,
+    Tap: "tap",
+    Swipe: "swipe",
+    Drag: "drag",
 })
 
 // hmm
@@ -12,10 +12,12 @@ class PathologyOptions {
     static outlineGrid = false;
     static moveMethod = MoveMethods.Tap;
 }
+Object.seal(PathologyOptions);
 
 class IOptions { // bad name atm cuz bad implementation
     static forwardBinds = [];
 
+    // options are sealed but failure is silent, so check and log anyway
     static assertProperty(propertyName) {
         if (PathologyOptions[propertyName] === undefined) {
             throw new Error(`${propertyName} is not an option.`);
@@ -24,14 +26,23 @@ class IOptions { // bad name atm cuz bad implementation
 
     // me when i don't use a framework so i end up making my own
     // not entirely sure if there can be a (to the clock cycle tbf) race condition here
-    static bindToggle(toggle, propertyName) {
+    static bindToggle(toggle, propertyName, onPropertyChange = () => {}) {
         this.assertProperty(propertyName);
-        toggle.addEventListener('click', () => {
+        toggle.addEventListener('change', () => {
             this.setProperty(propertyName, toggle.checked);
         });
-        this.forwardBinds.push(() => toggle.checked = PathologyOptions[propertyName]);
+        this.forwardBinds.push(() => {toggle.checked = PathologyOptions[propertyName]; onPropertyChange()});
         // sync immediately
         toggle.checked = PathologyOptions[propertyName];
+    }
+    static bindValue(element, propertyName, onPropertyChange = () => {}) {
+        this.assertProperty(propertyName);
+        element.addEventListener('change', () => {
+            this.setProperty(propertyName, element.value);
+        });
+        this.forwardBinds.push(() => {element.value = PathologyOptions[propertyName]; onPropertyChange()});
+        // sync immediately
+        element.value = PathologyOptions[propertyName];
     }
 
     static updateBinds() {
@@ -57,7 +68,11 @@ class IOptions { // bad name atm cuz bad implementation
             if (!pair.includes(':')) {continue}
             const [property, value] = pair.split(':');
             this.assertProperty(property);
-            PathologyOptions[property] = JSON.parse(value);
+            if (typeof PathologyOptions[property] !== "string") {
+                PathologyOptions[property] = JSON.parse(value);
+            } else {
+                PathologyOptions[property] = value;
+            }
         }
         this.updateBinds();
     }

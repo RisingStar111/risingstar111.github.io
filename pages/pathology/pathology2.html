@@ -197,9 +197,9 @@
         <br>
         <label for="touchControlMode">Touch control method:</label>
         <select id="touchControlMode">
-            <option value="tapMove">Tap to move</option>
-            <option value="swipeMove">Swipe to step</option>
-            <option value="dragMove">Drag to move</option>
+            <option value="tap">Tap to move</option>
+            <option value="swipe">Swipe to step</option>
+            <option value="drag">Drag to move</option>
         </select>
         <br>
         <form method="dialog">
@@ -227,8 +227,9 @@
         const touchControlMode = () => document.getElementById("touchControlMode").value;
         // bind options controls
         // the options script should have been run first as script module => defer
-        IOptions.bindToggle(document.getElementById("fullWalls"), 'fillWalls');
-        IOptions.bindToggle(document.getElementById("gridOutlines"), 'outlineGrid');
+        IOptions.bindToggle(document.getElementById("fullWalls"), 'fillWalls', () => {drawBlockPreview(), drawBoard()});
+        IOptions.bindToggle(document.getElementById("gridOutlines"), 'outlineGrid', drawBoard);
+        IOptions.bindValue(document.getElementById("touchControlMode"), 'moveMethod');
         // mouse control data
         let lastMouseHoverIndex = null;
         let deltaMouseX = null;
@@ -248,8 +249,6 @@
         // Set up button callbacks
         // global controls
         document.getElementById("optionsButton").onclick = displayOptions;
-        document.getElementById("gridOutlines").onclick = drawBoard;
-        document.getElementById("fullWalls").onclick = () => {drawBlockPreview(), drawBoard()};
         // play mode controls
         document.getElementById("moveUpButton").onclick = () => playLevel.moveHandler(Direction.Up);
         document.getElementById("moveDownButton").onclick = () => playLevel.moveHandler(Direction.Down);
@@ -300,7 +299,7 @@
 
             (activeLevel()).drawToCanvas(canvas, ctx, PathologyOptions.outlineGrid, PathologyOptions.fillWalls);
 
-            if (playing && touchControlMode() == "tapMove" && lastMouseHoverIndex !== null) {
+            if (playing && PathologyOptions.moveMethod == MoveMethods.Tap && lastMouseHoverIndex !== null) {
                 let highlights = playLevel.board.indices_on_path_to_index(lastMouseHoverIndex);
                 playLevel.drawHighlights(highlights, canvas, ctx);
             }
@@ -559,7 +558,7 @@
                     deltaMouseY += e.clientY - lastMouseY;
                     lastMouseX = e.clientX;
                     lastMouseY = e.clientY;
-                    if (touchControlMode() == "swipeMove") {
+                    if (PathologyOptions.moveMethod == MoveMethods.Swipe) {
                         if (Math.abs(deltaMouseX) > 128) {
                             playLevel.moveHandler(deltaMouseX < 0 ? Direction.Left : Direction.Right);
                             deltaMouseX = null;
@@ -569,7 +568,7 @@
                             deltaMouseX = null;
                             deltaMouseY = null;
                         }
-                    } else if (touchControlMode() == "dragMove") {
+                    } else if (PathologyOptions.moveMethod == MoveMethods.Drag) {
                         if (Math.abs(deltaMouseX) > 64) {
                             playLevel.moveHandler(deltaMouseX < 0 ? Direction.Left : Direction.Right);
                             deltaMouseX = 0;
@@ -630,7 +629,7 @@
                 }
             // playing
             } else {
-                if (touchControlMode() == "tapMove") {
+                if (PathologyOptions.moveMethod == MoveMethods.Tap) {
                     playLevel.history.move_to_index(clickIndex);
                     playLevel.setStep(playLevel.history.current_step);
                 }
