@@ -89,8 +89,10 @@
             </div>
         </div>
     </template>
-
-    <h1>Extended Pathology Level Editor</h1>
+    <script type="module">
+        let a = await fetch("./icons.svg")
+    </script>
+    
     <div id="canvasContainerContainer" style="place-items: center;">
         <div id="canvasContainer">
             <br>
@@ -98,7 +100,7 @@
                 <button class="resizeButton" id="addTop">+</button>
                 <button class="resizeButton" id="subTop">-</button>
             </div>
-            <button id="optionsButton">Options</button>
+            <button id="optionsButton"><svg viewBox="0 0 100 100"><use href="./icons.html#gear"></use></svg></button>
             <div>
                 <button class="resizeButton" id="addLeft">+</button>
                 <button class="resizeButton" id="subLeft">-</button>
