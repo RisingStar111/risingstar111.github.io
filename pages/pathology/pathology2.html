@@ -207,6 +207,7 @@
         </form>
     </dialog>
 
+    <script src="options.js"></script>
     <script type="module">
         import {Level, Direction, Block} from './board.js'
         
@@ -223,9 +224,11 @@
         let playing = false;
         // toggle state getters // the return value does change, but the function is const
         const clearPlacement = () => document.getElementById("clearPlacement").checked;
-        const fullWall = () => document.getElementById("fullWalls").checked;
-        const gridOutlines = () => document.getElementById("gridOutlines").checked;
         const touchControlMode = () => document.getElementById("touchControlMode").value;
+        // bind options controls
+        // the options script should have been run first as script module => defer
+        IOptions.bindToggle(document.getElementById("fullWalls"), 'fillWalls');
+        IOptions.bindToggle(document.getElementById("gridOutlines"), 'outlineGrid');
         // mouse control data
         let lastMouseHoverIndex = null;
         let deltaMouseX = null;
@@ -295,7 +298,7 @@
             gridContainer.style.gridTemplateColumns = '50px auto 50px';
             gridContainer.style.gridTemplateRows = '50px auto 50px';
 
-            (activeLevel()).drawToCanvas(canvas, ctx, gridOutlines(), fullWall());
+            (activeLevel()).drawToCanvas(canvas, ctx, PathologyOptions.outlineGrid, PathologyOptions.fillWalls);
 
             if (playing && touchControlMode() == "tapMove" && lastMouseHoverIndex !== null) {
                 let highlights = playLevel.board.indices_on_path_to_index(lastMouseHoverIndex);
@@ -414,7 +417,7 @@
 
         function drawBlockPreview() {
             previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height)
-            if (fullWall() && selectedSides.every((side) => {return side == "wallSide"})) {
+            if (PathologyOptions.fillWalls && selectedSides.every((side) => {return side == "wallSide"})) {
                 Level.drawSpace("wallTile", [0, 0], 1, 1, previewCtx, previewCanvas);
             } else {
                 Level.drawBlock(selectedSides, [0, 0], 1, 1, previewCtx, previewCanvas);
