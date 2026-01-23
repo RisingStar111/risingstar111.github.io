@@ -159,6 +159,39 @@ impl Board {
         self.remove_side_left();
         self.player += 1;
     }
+    
+    #[wasm_bindgen]
+    pub fn mirror(&mut self) {
+        for j in 0..self.height {
+            for i in 0..(self.width / 2 + self.width % 2) { // halve the board, include the middle
+                let temp = self.grid[i + self.width * j];
+                self.grid[i + self.width * j] = self.grid[self.width - 1 - i + self.width * j];
+                self.grid[i + self.width * j].mirror();
+                self.grid[self.width - 1 - i + self.width * j] = temp; // must happen after first is mirrored or middle column gets mirrored twice
+                self.grid[self.width - 1 - i + self.width * j].mirror();
+                if self.width - 1 - i + self.width * j == self.player { // TODO better
+                    self.player = i + self.width * j;
+                } else if i + self.width * j == self.player { // TODO better
+                    self.player = self.width - 1 - i + self.width * j;
+                }
+            }
+        }
+    }
+    #[wasm_bindgen]
+    pub fn rotate_ccw(&mut self) {
+        let old = self.clone();
+        for i in 0..self.width {
+            for j in 0..self.height {
+                // assumes square
+                self.grid[i + self.width * (self.height - j - 1)] = old.grid[j + self.width * i];
+                self.grid[i + self.width * (self.height - j - 1)].rotate_ccw();
+                if j + self.width * i == old.player { // TODO better
+                    self.player = i + self.width * (self.height - j - 1);
+                }
+            }
+        }
+    }
+
     #[wasm_bindgen]
     pub fn get_block_trbl(&self, index: usize) -> Option<Vec<String>> {
         let block = self.grid[index].get_block();

@@ -219,6 +219,9 @@ export class Block {
     set right(arg0) {
         wasm.__wbg_set_block_right(this.__wbg_ptr, arg0);
     }
+    rotate_ccw() {
+        wasm.block_rotate_ccw(this.__wbg_ptr);
+    }
     /**
      * @param {Direction} move_dir
      * @returns {Side}
@@ -237,6 +240,9 @@ export class Block {
     static from_trbl_bytes(top, right, bottom, left) {
         const ret = wasm.block_from_trbl_bytes(top, right, bottom, left);
         return Block.__wrap(ret);
+    }
+    mirror() {
+        wasm.block_mirror(this.__wbg_ptr);
     }
     /**
      * @param {string} top
@@ -300,6 +306,9 @@ export class Board {
     get_player() {
         const ret = wasm.board_get_player(this.__wbg_ptr);
         return ret >>> 0;
+    }
+    rotate_ccw() {
+        wasm.board_rotate_ccw(this.__wbg_ptr);
     }
     /**
      * @param {number} index
@@ -397,6 +406,9 @@ export class Board {
     clone() {
         const ret = wasm.board_clone(this.__wbg_ptr);
         return Board.__wrap(ret);
+    }
+    mirror() {
+        wasm.board_mirror(this.__wbg_ptr);
     }
     /**
      * @param {number} width

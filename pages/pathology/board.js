@@ -3,7 +3,7 @@ import init, { Board, Block, Direction, Space, BoardHistory } from './pkg/hello_
 await init();
 console.log("Loaded Pathology WASM")
 
-export {Direction, Block}
+export {Direction, Block, Board, Space}
 
 export class Level {
     history;

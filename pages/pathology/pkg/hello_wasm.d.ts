@@ -5,8 +5,10 @@ export class Block {
   private constructor();
   free(): void;
   [Symbol.dispose](): void;
+  rotate_ccw(): void;
   pushed_side(move_dir: Direction): Side;
   static from_trbl_bytes(top: number, right: number, bottom: number, left: number): Block;
+  mirror(): void;
   static from_trbl(top: string, right: string, bottom: string, left: string): Block;
   serialize(): Uint8Array;
   top: Side;
@@ -21,6 +23,7 @@ export class Board {
   [Symbol.dispose](): void;
   get_height(): number;
   get_player(): number;
+  rotate_ccw(): void;
   set_player(index: number): void;
   move_player(dir: Direction): StepOutcome;
   add_side_top(): void;
@@ -37,6 +40,7 @@ export class Board {
   static from_serialized_bytes(data: Uint8Array): Board;
   indices_on_path_to_index(index: number): Uint32Array;
   clone(): Board;
+  mirror(): void;
   static default(width: number, height: number): Board;
   get_tile(index: number): Tile;
   get_index(x_fraction: number, y_fraction: number): number;
@@ -120,12 +124,14 @@ export interface InitOutput {
   readonly board_get_tile: (a: number, b: number) => number;
   readonly board_get_width: (a: number) => number;
   readonly board_indices_on_path_to_index: (a: number, b: number) => [number, number];
+  readonly board_mirror: (a: number) => void;
   readonly board_move_player: (a: number, b: number) => number;
   readonly board_move_tile: (a: number, b: number, c: number, d: number) => number;
   readonly board_remove_side_bottom: (a: number) => void;
   readonly board_remove_side_left: (a: number) => void;
   readonly board_remove_side_right: (a: number) => void;
   readonly board_remove_side_top: (a: number) => void;
+  readonly board_rotate_ccw: (a: number) => void;
   readonly board_serialize: (a: number) => [number, number];
   readonly board_serialize_bytes: (a: number) => [number, number];
   readonly board_set_block: (a: number, b: number, c: number) => void;
@@ -156,7 +162,9 @@ export interface InitOutput {
   readonly __wbg_tile_free: (a: number, b: number) => void;
   readonly block_from_trbl: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
   readonly block_from_trbl_bytes: (a: number, b: number, c: number, d: number) => number;
+  readonly block_mirror: (a: number) => void;
   readonly block_pushed_side: (a: number, b: number) => number;
+  readonly block_rotate_ccw: (a: number) => void;
   readonly block_serialize: (a: number) => [number, number];
   readonly __wbindgen_externrefs: WebAssembly.Table;
   readonly __externref_drop_slice: (a: number, b: number) => void;

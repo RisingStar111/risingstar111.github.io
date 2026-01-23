@@ -65,6 +65,16 @@ impl Tile {
         data.drain(0..5);
         tile
     }
+    pub fn mirror(&mut self) {
+        if self.block.is_some() {
+            self.block.as_mut().unwrap().mirror();
+        }
+    }
+    pub fn rotate_ccw(&mut self) {
+        if self.block.is_some() {
+            self.block.as_mut().unwrap().rotate_ccw();
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -167,5 +177,17 @@ impl Block {
             }
         };
         Block {top: parse(top), bottom: parse(bottom), left: parse(left), right: parse(right)}
+    }
+    pub fn rotate_ccw(&mut self) {
+        let temp = self.top;
+        self.top = self.right;
+        self.right = self.bottom;
+        self.bottom = self.left;
+        self.left = temp;
+    }
+    pub fn mirror(&mut self) {
+        let temp = self.left;
+        self.left = self.right;
+        self.right = temp;
     }
 }

@@ -5,30 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website Template</title>
     <link rel="stylesheet" href="/base.css">
+    <style>
+        #canvasContainer {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr;
+            align-items: center;
+            justify-items: center;
+        }
+    </style>
 </head>
 <body style="display: flex; flex-direction: column">
     <div id="header"></div>
     <h1>5x5 levels</h1>
-    <div id="canvasContainer">
-        <canvas id="canvas" width="360" height="360"></canvas>
-        <br>
-        <button onclick="generateLevel()">Random level</button>
-        <label id="stepGoal">Current/Optimal stepcount: 0/0</label>
-        <br>
-        <label>Use WASD or Arrow keys to move. R to restart. Push boxes to open a way to the goal in the fewest steps.</label>
+    <div id="canvasContainerContainer" style="place-items: center;">
+        <div id="canvasContainer">
+            <canvas id="canvas" width=320 height=320 style="touch-action: none;"></canvas>
+        </div>
     </div>
     <div id="buttonControls">
-        <button onclick="moveHandler([0, -1])">↑</button>
+        <button id="newLevel">Random level</button>
+        <label id="stepGoal">Optimal: 0</label>
         <br>
-        <button onclick="moveHandler([-1, 0])">←</button>
-        <button onclick="moveHandler([0, 1])">↓</button>
-        <button onclick="moveHandler([1, 0])">→</button>
+        <label>Use WASD or Arrow keys to move. R to restart. Push boxes to open a way to the goal in the fewest steps.</label>
         <br>
-        <button onclick="restartLevel()">Restart</button>
+        <button id="moveUpButton">↑</button>
+        <br>
+        <button id="moveLeftButton">←</button>
+        <button id="moveDownButton">↓</button>
+        <button id="moveRightButton">→</button>
+        <br>
+        <button id="restartButton">Restart</button>
+        <button id="undoButton">Undo</button>
+        <br>
+        <p id="stepCountText">Step: 0</p>
+        <input type="range" min="0" max="0" id="stepSlider">
     </div>
     <div id="bonusOptions">
         <label><input type="checkbox" id="orientationToggle" checked>Randomise orientation</label>
         <label><input type="checkbox" id="automaticRandom">New level when optimal</label>
+        <button id="optionsButton">Options</button>
     </div>
     <br>
     <div style="display: flex; justify-content: center;">
@@ -39,26 +55,219 @@
             <p>For a simplified version of Pathology where all blocks can be pushed in any direction, (only most?) subsets are given by a direct subset on the 'playable space' (non-wall tiles) of each level - if the playable space of level Y is contained in the playable space of level X, and all blocks, goals and the player are in the same place, then X is a subset of Y, and Y is discarded. When restricted blocks are introduced, the above still applies, but each block checks for a subset of pushable sides rather than exact equality (block A is a subset of block B if B has at least the same sides pushable as A).</p>
         </div>
     </div>
+    <dialog id="optionsDialog">
+        <input type="checkbox" id="fullWalls" checked>
+        <label for="fullWalls">Wall-only blocks are filled in.</label>
+        <br>
+        <input type="checkbox" id="gridOutlines">
+        <label for="gridOutlines">Show the block grid.</label>
+        <br>
+        <label for="touchControlMode">Touch control method:</label>
+        <select id="touchControlMode">
+            <option value="tap">Tap to move</option>
+            <option value="swipe">Swipe to step</option>
+            <option value="drag">Drag to move</option>
+        </select>
+        <br>
+        <form method="dialog">
+            <button>Close</button>
+        </form>
+    </dialog>
 
-    <script>
+    <script src="options.js"></script>
+    <script type="module">
+        // a lot of this is duplicate from the editor, but js continues to make actually separating code awkward
+        import {Level, Direction, Block, Board, Space} from './board.js'
+        
+        // interfaces(?) for the rust board, with associated static helpers
+        let playLevel = new Level(); // created when loading a level
+        Level.levelChangedCallback = onLevelChanged;
+        // bind options controls
+        // the options script should have been run first as script module => defer
+        IOptions.bindToggle(document.getElementById("fullWalls"), 'fillWalls', drawBoard);
+        IOptions.bindToggle(document.getElementById("gridOutlines"), 'outlineGrid', drawBoard);
+        IOptions.bindValue(document.getElementById("touchControlMode"), 'moveMethod');
+        // mouse control data
+        let lastMouseHoverIndex = null;
+        let deltaMouseX = null;
+        let deltaMouseY = null;
+        let lastMouseX = null;
+        let lastMouseY = null;
+
+        // canvas for rendering the level, both for edit mode and play mode
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         ctx.imageSmoothingEnabled = false;
-        let steps = [];
-        let grid = defaultGrid();
-        let baseGrid = defaultGrid();
+
+        // Set up button callbacks
+        // global controls
+        document.getElementById("optionsButton").onclick = displayOptions;
+        // play mode controls
+        document.getElementById("moveUpButton").onclick = () => playLevel.moveHandler(Direction.Up);
+        document.getElementById("moveDownButton").onclick = () => playLevel.moveHandler(Direction.Down);
+        document.getElementById("moveLeftButton").onclick = () => playLevel.moveHandler(Direction.Left);
+        document.getElementById("moveRightButton").onclick = () => playLevel.moveHandler(Direction.Right);
+        document.getElementById("restartButton").onclick = restartLevel;
+        document.getElementById("undoButton").onclick = undoStep;
+        document.getElementById("stepSlider").oninput = onSliderChange;
+        document.getElementById("newLevel").onclick = generateLevel;
+
+        function drawBoard() { // todo without the sizer buttons, probably a better method
+            // allow page formatting to resize the grid to fit
+            const gridContainer = document.getElementById("canvasContainer");
+            gridContainer.style.gridTemplateColumns = 'minmax(0px, 1fr)';
+            gridContainer.style.gridTemplateRows = 'minmax(0px, 1fr)';
+            // make canvas view big to force grid to ?
+            canvas.width = 1000;
+            canvas.height = 1000;
+            // force reflow and get pixel track sizes
+            const gridSizes = window.getComputedStyle(gridContainer).grid.split(" ");
+            // force a maximum size of 320px
+            canvas.width = Math.min(320, parseInt(gridSizes[2]));
+            canvas.height = Math.min(320, parseInt(gridSizes[0]));
+            // set the grid to scale to the content
+            gridContainer.style.gridTemplateColumns = 'auto';
+            gridContainer.style.gridTemplateRows = 'auto';
+
+            playLevel.drawToCanvas(canvas, ctx, PathologyOptions.outlineGrid, PathologyOptions.fillWalls);
+
+            if (PathologyOptions.moveMethod == MoveMethods.Tap && lastMouseHoverIndex !== null) {
+                let highlights = playLevel.board.indices_on_path_to_index(lastMouseHoverIndex);
+                playLevel.drawHighlights(highlights, canvas, ctx);
+            }
+        }
+
+        function onSliderChange() {
+            playLevel.setStep(document.getElementById("stepSlider").value);
+        }
+
+        function onLevelChanged() {
+            const length = playLevel.history.get_history_length() - 1;
+            const current = playLevel.history.current_step;
+            document.getElementById("stepSlider").max = length;
+            document.getElementById("stepSlider").value = current;
+            document.getElementById("stepCountText").innerHTML = `Steps: ${current}`;
+            if (automaticRandomToggle.checked && playLevel.history.current_step == optimalStepcount && playLevel.board.get_space(playLevel.board.get_player()) == "goalSpace") {
+                generateLevel();
+            }
+            drawBoard();
+        }
+
+        function displayOptions() {
+            document.getElementById("optionsDialog").showModal();
+        }
+
+        function restartLevel() {
+            playLevel.setStep(0);
+            drawBoard();
+        }
+
+        function undoStep() {
+            if (playLevel.history.current_step > 0) {
+                playLevel.setStep(playLevel.history.current_step - 1);
+            }
+        }
+
+        document.addEventListener('keydown', function (event) {
+            // stackoverflow moment
+            const direction = {
+                "ArrowLeft"  : Direction.Left,
+                "ArrowRight" : Direction.Right,
+                "ArrowUp"    : Direction.Up,
+                "ArrowDown"  : Direction.Down,
+                "KeyW"       : Direction.Up,
+                "KeyA"       : Direction.Left,
+                "KeyS"       : Direction.Down,
+                "KeyD"       : Direction.Right,
+            }[event.code];
+            if (direction !== undefined) {
+                playLevel.moveHandler(direction);
+            }
+            if (event.code == "KeyR") {
+                restartLevel();
+            }
+            if (event.code == "KeyZ") {
+                undoStep();
+            }
+        });
+
+        document.getElementById("canvas").addEventListener('pointerdown', (e) => {
+            deltaMouseX = 0;
+            deltaMouseY = 0;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        })
+        document.getElementById("canvas").addEventListener('pointerup', (e) => {
+            deltaMouseX = null;
+            deltaMouseY = null;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        })
+        document.getElementById("canvas").addEventListener('pointermove', (e) => {
+            // TODO (make better this is bad code)
+            const rect = canvas.getBoundingClientRect();
+            let clickX = clamp((e.clientX - rect.left) / canvas.width, 0, 0.999);
+            let clickY = clamp((e.clientY - rect.top) / canvas.height, 0, 0.999);
+            const mouseIndex = playLevel.board.get_index(clickX, clickY);
+            if (mouseIndex != lastMouseHoverIndex) {
+                lastMouseHoverIndex = mouseIndex;
+                drawBoard();
+            }
+            if (deltaMouseX !== null) {
+                deltaMouseX += e.clientX - lastMouseX;
+                deltaMouseY += e.clientY - lastMouseY;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                if (PathologyOptions.moveMethod == MoveMethods.Swipe) {
+                    if (Math.abs(deltaMouseX) > 128) {
+                        playLevel.moveHandler(deltaMouseX < 0 ? Direction.Left : Direction.Right);
+                        deltaMouseX = null;
+                        deltaMouseY = null;
+                    } else if (Math.abs(deltaMouseY) > 128) {
+                        playLevel.moveHandler(deltaMouseY < 0 ? Direction.Up : Direction.Down);
+                        deltaMouseX = null;
+                        deltaMouseY = null;
+                    }
+                } else if (PathologyOptions.moveMethod == MoveMethods.Drag) {
+                    if (Math.abs(deltaMouseX) > 64) {
+                        playLevel.moveHandler(deltaMouseX < 0 ? Direction.Left : Direction.Right);
+                        deltaMouseX = 0;
+                    }
+                    if (Math.abs(deltaMouseY) > 64) {
+                        playLevel.moveHandler(deltaMouseY < 0 ? Direction.Up : Direction.Down);
+                        deltaMouseY = 0;
+                    }
+                }
+            }
+        })
+        document.getElementById("canvas").addEventListener('mouseleave', (e) => {
+            lastMouseHoverIndex = null;
+            drawBoard();
+        })
+        document.getElementById("canvas").addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) / canvas.width;
+            const clickY = (e.clientY - rect.top) / canvas.height;
+            const clickIndex = playLevel.board.get_index(clickX, clickY);
+            if (PathologyOptions.moveMethod == MoveMethods.Tap) {
+                playLevel.history.move_to_index(clickIndex);
+                playLevel.setStep(playLevel.history.current_step);
+            }
+        });
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(value, max));
+        }
+
         let optimalStepcount = 0;
         let randomOrientationToggle = document.getElementById("orientationToggle");
-        let automaticRandomToggle = document.getElementById("automaticRandom");
-        // dimensions are hardcoded but no guarantees I won't change that later
-        const gridWidth = 5;
-        const gridHeight = 5;
-        let tileSize = 400/Math.max(gridWidth, gridHeight);
-        // can't see a reason I'd add more than one goal, and simplifies grid to separate
-        let goalX = 2;
-        let goalY = 3;
-        let playerX = 3;
-        let playerY = 3;
+        let automaticRandomToggle = document.getElementById("automaticRandom"); // TODO
+
+        // load level binary
+        const levelNum = 56599;
+        let levelSize = 5 * 5;
+        let levels = undefined;
+        loadLevelData().then(buffer => {levels = new Int8Array(buffer); console.log("Loaded levels data."); generateLevel()});
 
         // encoded values are just sequential, map those to
         // 0-15: bits ON indicate pushable from the top, left, bottom, right (most to least sig bit)
@@ -69,15 +278,6 @@
         const tilemap = [16,  0, 15, 17, 18, 19,  1,  2,  4,  8,
                           3,  6, 12,  9, 14, 13, 11,  7,  5, 10];
 
-        const tileImg = new Image();
-        tileImg.src = "sprites/base.png";
-
-        // load level binary
-        const levelNum = 56599;
-        let levelSize = gridWidth * gridHeight
-        let levels = undefined
-        loadLevelData().then(buffer => {levels = new Int8Array(buffer); console.log("Loaded levels data.");});
-
         async function loadLevelData() {
             // if actually adding more level sets, probably good to look into external hosting
             const response = await fetch("level_batches/5x5holeless.bin");
@@ -86,205 +286,43 @@
             return buffer
         }
 
-        function rotateLevelCCW() {
-            let newGrid = new Array(grid.length);
-            for (let i = 0; i < gridWidth; i++) {
-                for (let j = 0; j < gridHeight; j++) {
-                    // assumes square
-                    let tile = grid[j + gridWidth * i];
-                    if (tile <= 15) {
-                        tile = (tile >> 1) | ((tile & 1) << 3);
-                    }
-                    newGrid[i + gridWidth * (gridHeight - j - 1)] = tile;
-                }
-            }
-            return newGrid
-        }
-        
-        function mirrorLevel() {
-            let newGrid = new Array(grid.length);
-            for (let i = 0; i < gridWidth; i++) {
-                for (let j = 0; j < gridHeight; j++) {
-                    let tile = grid[gridWidth - i - 1 + gridWidth * j];
-                    if (tile <= 15) {
-                        tile = tile ^ (5 * ((tile ^ (tile >> 2)) & 1));
-                    }
-                    newGrid[i + gridWidth * j] = tile;
-                }
-            }
-            return newGrid
-        }
-
         function generateLevel() {
-            steps = [];
-
             let levelIndex = randomInt(0, levelNum);
             optimalStepcount = levels[levelIndex];
-            grid = levels.slice(levelNum + levelSize * levelIndex, levelNum + levelSize * (levelIndex + 1));
+            document.getElementById("stepGoal").innerHTML = `Optimal: ${optimalStepcount}`
+            let grid = levels.slice(levelNum + levelSize * levelIndex, levelNum + levelSize * (levelIndex + 1));
             grid = grid.map(function (val) {return tilemap[val]});
+            let board = Board.default(5, 5);
+            for (let i = 0; i < grid.length; i++) {
+                if (grid[i] == 18) {
+                    board.set_player(i);
+                } else if (grid[i] == 17) {
+                    board.set_space(i, Space.Goal);
+                } else if (grid[i] < 16) {
+                    board.set_block(i, Block.from_trbl_bytes(1 + ((grid[i] >> 3) & 1), 1 + (grid[i] & 1), 1 + ((grid[i] >> 1) & 1), 1 + ((grid[i] >> 2) & 1)));
+                }
+            }
 
             if (randomOrientationToggle.checked) {
                 let rot = randomInt(0, 4);
                 let flip = randomInt(0, 2);
                 if (flip > 0) {
-                    grid = mirrorLevel();
+                    board.mirror();
                 }
                 while (rot > 0) {
-                    grid = rotateLevelCCW();
+                    board.rotate_ccw();
                     rot--;
                 }
             }
 
-            baseGrid = grid.slice();
-            locateAndRemovePlayerAndGoal();
+            playLevel = new Level(board);
+            playLevel.setStep(0);
 
-            drawLevel();
-        }
-
-        function restartLevel() {
-            steps = [];
-            grid = baseGrid.slice();
-            locateAndRemovePlayerAndGoal();
-            drawLevel();
-        }
-
-        function locateAndRemovePlayerAndGoal() {
-            for (let i = 0; i < levelSize; i++) {
-                if (grid[i] == 18) {
-                    grid[i] = 16;
-                    playerX = i % gridWidth;
-                    playerY = Math.floor(i / gridWidth);
-                }
-                if (grid[i] == 17) {
-                    grid[i] = 16;
-                    goalX = i % gridWidth;
-                    goalY = Math.floor(i / gridWidth);
-                }
-            }
-        }
-
-        function moveHandler(dir) {
-            const newPos = [playerX + dir[0], playerY + dir[1]];
-            if (!checkMoveable(newPos, dir)) {
-                return
-            }
-            const tile = grid[newPos[0] + gridWidth * newPos[1]];
-
-            // no holes atm so can just move block since it's moveable
-            if (tile <= 15) {
-                grid[newPos[0] + dir[0] + gridWidth * (newPos[1] + dir[1])] = grid[newPos[0] + gridWidth * newPos[1]];
-                grid[newPos[0] + gridWidth * newPos[1]] = 16;
-            }
-            
-            // now empty so just move player to there
-            playerX = newPos[0];
-            playerY = newPos[1];
-            steps.push([dir[0], dir[1]]);
-            drawLevel();
-        }
-
-        function checkMoveable(pos, dir) {
-            // check in bounds
-            if (pos[0] < 0 || pos[0] >= gridWidth || pos[1] < 0 || pos[1] >= gridHeight) {
-                return false
-            }
-
-            const tile = grid[pos[0] + gridWidth * pos[1]];
-            // if empty, free to move
-            if (tile == 16) {
-                return true
-            }
-            // check there's nothing in the way
-            const intoPos = [pos[0] + dir[0], pos[1] + dir[1]];
-            if (intoPos[0] < 0 || intoPos[0] >= gridWidth || intoPos[1] < 0 || intoPos[1] >= gridHeight) {
-                return false
-            }
-            const intoTile = grid[pos[0] + dir[0] + gridWidth * (pos[1] + dir[1])];
-            if (intoTile <= 15) { // no holes atm
-                return false
-            }
-            // check can be pushed in dir
-            if (tile <= 15) {
-                // dir to bit index // can't even use a switch easily if i wanted so have this instead
-                // inverted since tile is by side pushable from
-                let bit = 1 << (dir[0] * (dir[0] + 1) + Math.abs(dir[1]) * (dir[1] + 2));
-                return (tile & bit) > 0
-            }
+            drawBoard();
         }
 
         function randomInt(lowInclusive, highExclusive) {
             return lowInclusive + Math.floor(Math.random() * (highExclusive - lowInclusive))
-        }
-
-        document.addEventListener('keydown', function (event) {
-            // stackoverflow moment
-            const direction = {
-                "ArrowLeft"  : [-1, 0],
-                "ArrowRight" : [1, 0],
-                "ArrowUp"    : [0, -1],
-                "ArrowDown"  : [0, 1],
-                "KeyW"       : [0, -1],
-                "KeyA"       : [-1, 0],
-                "KeyS"       : [0, 1],
-                "KeyD"       : [1, 0],
-            }[event.code];
-            if (direction !== undefined) {
-                moveHandler(direction);
-            }
-
-            if (event.code == "KeyR") {
-                restartLevel();
-            }
-        });
-
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function drawTile(tile, gridPos) {
-            // grid to canvas position
-            const canvasX = gridPos[0] * (canvas.width / gridWidth);
-            const canvasY = gridPos[1] * (canvas.height / gridHeight);
-
-            // render image from spritesheet
-            const spriteX = tile * 34;
-            ctx.drawImage(tileImg, spriteX, 0, 32, 32, canvasX, canvasY, canvas.width / gridWidth, canvas.height / gridHeight);
-        }
-
-        function drawLevel() {
-            clearCanvas();
-            
-            // draw blocks
-            for (let i = 0; i < grid.length; i++) {
-                drawTile(grid[i], [i % gridWidth, Math.floor(i / gridHeight)])
-            }
-
-            // draw player
-            drawTile(18, [playerX, playerY]);
-
-            // draw goal if empty, special sprite for winning
-            if (playerX == goalX && playerY == goalY) {
-                drawTile(20, [goalX, goalY]);
-                if (steps.length == optimalStepcount && automaticRandomToggle.checked) {
-                    generateLevel();
-                }
-            } else if (grid[goalX + gridWidth * goalY] == 16) {
-                drawTile(17, [goalX, goalY]);
-            }
-
-
-            // set optimal stepcount display
-            document.getElementById("stepGoal").innerHTML = "Current/Optimal stepcount: " + steps.length.toString() + "/" + optimalStepcount.toString();
-        }
-
-        function defaultGrid() {
-            return [
-                 16,  1,  2,  3,  4,
-                 5,  6,  7,  8,  9,
-                10, 11, 12, 13, 14,
-                15, 16, 16, 16, 0,
-                16, 16, 0, 0, 16,
-            ]
         }
     </script>
 </body>

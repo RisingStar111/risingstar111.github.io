@@ -378,7 +378,7 @@
             editorLevel.loadDefault(newWidth, newHeight);
         }
         function restartLevel() {
-            playLevel.history.current_step = 0;
+            playLevel.setStep(0);
             drawBoard();
         }
 
