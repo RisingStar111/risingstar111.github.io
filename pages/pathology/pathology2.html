@@ -212,7 +212,7 @@
 
     <script src="options.js"></script>
     <script type="module">
-        import {Level, Direction, Block} from './board.js'
+        import {Level, Direction, Block, Space} from './board.js'
         
         // interfaces(?) for the rust board, with associated static helpers
         let editorLevel = new Level();
@@ -589,6 +589,24 @@
                 drawBoard();
             }
         })
+        document.getElementById("canvas").addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) / canvas.width;
+            const clickY = (e.clientY - rect.top) / canvas.height;
+            const clickIndex = editorLevel.board.get_index(clickX, clickY);
+            if (!playing) {
+                // TODO this is patch code atm
+                let board = editorLevel.board.clone();
+                if (placeLayer == "block") {
+                    board.set_block(clickIndex, null);
+                } else if (placeLayer == "space") {
+                    board.set_space(clickIndex, Space.Empty);
+                }
+                editorLevel.history.add_not_seen(board.clone());
+                editorLevel.setStep(editorLevel.history.current_step);
+            }
+        });
         document.getElementById("canvas").addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const clickX = (e.clientX - rect.left) / canvas.width;
